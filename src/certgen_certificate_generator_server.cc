@@ -247,6 +247,31 @@ namespace certgen
         return config;
     }
 
+    // read config helper function
+    static CertificateGeneratorConfig generateConfig(const std::string & serviceName)
+    {
+        std::string configFilePath(CONFIG_PATH + serviceName + ".cfg");
+        std::ifstream configFile (configFilePath);
+        if (!configFile)
+        {
+            throw std::runtime_error ("Could not open file " + configFilePath);
+        }
+
+        configFile.exceptions ( std::ifstream::failbit | std::ifstream::badbit );
+        std::stringstream configJson;
+        configJson << configFile.rdbuf();
+        configFile.close ();
+
+        cxxtools::SerializationInfo certgenSi;
+        cxxtools::JsonDeserializer deserializer (configJson);
+        deserializer.deserialize (certgenSi);
+
+        CertificateGeneratorConfig certgenConfig;
+        certgenSi >>= certgenConfig;
+
+        return certgenConfig;
+    }
+
     static Keys generateKeys (const KeyConfig & conf)
     {
         std::string keyType = conf.keyType();
@@ -280,24 +305,7 @@ namespace certgen
         }
 
         std::string serviceName (params[0]);
-        std::string configFilePath(CONFIG_PATH + serviceName + ".cfg");
-        std::ifstream configFile (configFilePath);
-        if (!configFile)
-        {
-            throw std::runtime_error ("Could not open file " + configFilePath);
-        }
-
-        configFile.exceptions ( std::ifstream::failbit | std::ifstream::badbit );
-        std::stringstream configJson;
-        configJson << configFile.rdbuf();
-        configFile.close ();
-
-        cxxtools::SerializationInfo certgenSi;
-        cxxtools::JsonDeserializer deserializer (configJson);
-        deserializer.deserialize (certgenSi);
-
-        CertificateGeneratorConfig certgenConfig;
-        certgenSi >>= certgenConfig;
+        CertificateGeneratorConfig certgenConfig = generateConfig(serviceName);        
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
@@ -305,16 +313,58 @@ namespace certgen
         return "OK";
     }
 
-    std::string CertificateGeneratorServer::handleGenerateCSR(const fty::Payload & /*params*/)
+    std::string CertificateGeneratorServer::handleGenerateCSR(const fty::Payload & params)
     {
-        std::string empty;
-        return empty;
+        if (params.empty() || params[0].empty ())
+        {
+            throw std::runtime_error ("Missing service name");
+        }
+
+        std::string serviceName (params[0]);
+        CertificateGeneratorConfig certgenConfig = generateConfig(serviceName);        
+
+        fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
+
+        std::string csrPem;
+
+        try
+        {
+            CsrX509 csr = CsrX509::generateCsr(generateKeys(certgenConfig.keyConf()), config);
+            csrPem = csr.getPem();
+        }
+        catch(std::runtime_error &e)
+        {
+            throw std::runtime_error ("CSR generation failed: " + std::string(e.what()));
+        }
+
+        return csrPem;
     }
 
-    std::string CertificateGeneratorServer::handleImportCertificate(const fty::Payload & /*params*/)
+    std::string CertificateGeneratorServer::handleImportCertificate(const fty::Payload & params)
     {
-        std::string empty;
-        return empty;
+        if (params.size() != 2)
+        {
+            throw std::runtime_error ("Wrong number of parameters");
+        }
+        else if (params[0].empty ())
+        {
+            throw std::runtime_error ("Empty service name");
+        }
+        else if (params[1].empty ())
+        {
+            throw std::runtime_error ("Empty certificate PEM");
+        }
+       
+        std::string serviceName (params[0]);
+        std::string certPem (params[1]);
+
+        CertificateGeneratorConfig certgenConfig = generateConfig(serviceName);        
+
+        fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
+
+
+        store (CertificateX509(certPem), certgenConfig.storageConf());
+        return "OK";
     }
 
 } // namescpace certgen

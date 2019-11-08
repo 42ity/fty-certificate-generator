@@ -1,5 +1,5 @@
 /*  =========================================================================
-    certgen_accessor - class description
+    certgen_accessor - accessor to interface with certgen library
 
     Copyright (C) 2014 - 2019 Eaton
 
@@ -19,16 +19,90 @@
     =========================================================================
 */
 
-/*
-@header
-    certgen_accessor -
-@discuss
-@end
-*/
+#include "certgen_accessor.h"
 
 //  Structure of our class
 namespace certgen
 {
+    CertGenAccessor::CertGenAccessor(fty::SyncClient & reqClient)
+        : m_requestClient (reqClient)
+    {}
+
+    void CertGenAccessor::generateSelfCertificateReq(
+        const std::string & serviceName
+    ) const
+    {
+        fty::Payload payload;
+        try
+        {
+            payload = sendCommand(GENERATE_SELFSIGNED_CERTIFICATE, {serviceName});
+        }
+        catch (const std::exception& e)
+        {
+            log_info("certificate generator accessor returned '%s'", e.what());
+        }
+    }
+
+    std::string CertGenAccessor::generateCsr(const std::string & serviceName) const
+    {
+        fty::Payload payload;
+        try
+        {
+            payload = sendCommand(GENERATE_CSR, {serviceName});
+        }
+        catch (const std::exception& e)
+        {
+            log_info("certificate generator accessor returned '%s'", e.what());
+        }
+
+        return payload[0];
+    }
+
+    void CertGenAccessor::importCertificate(
+        const std::string & serviceName,
+        const std::string & cert
+    ) const
+    {
+        fty::Payload payload;
+        try
+        {
+            payload = sendCommand(IMPORT_CERTIFICATE, {serviceName, cert});
+        }
+        catch (const std::exception& e)
+        {
+            log_info("certificate generator accessor returned '%s'", e.what());
+        }
+    }
+
+    // send helper function
+    fty::Payload CertGenAccessor::sendCommand(
+        const std::string & command,
+        const fty::Payload & data
+    ) const
+    {
+        fty::Payload payload = {command};
+
+        std::copy(data.begin(), data.end(), back_inserter(payload));
+
+        fty::Payload recMessage = m_requestClient.syncRequestWithReply(payload);
+
+        if(recMessage[0] == "ERROR")
+        {
+            // error - throw exception
+            if(recMessage.size() == 2)
+            {
+                throw std::runtime_error(recMessage.at(1));
+            }
+            else
+            {
+                throw std::runtime_error("Missing data for error");
+            }
+        }
+
+        return recMessage;    
+    }
+
+
 
 } // namescpace certgen
 
