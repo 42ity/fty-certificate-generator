@@ -25,6 +25,8 @@
 #include <functional>
 #include <fty_common_sync_server.h>
 
+#define CONFIG_PATH "/etc/fty/fty-certificate-generator/"
+
 namespace certgen
 {
     using Command   = std::string;
@@ -37,7 +39,7 @@ namespace certgen
             explicit CertificateGeneratorServer();
             fty::Payload handleRequest(const fty::Sender & sender, const fty::Payload & payload) override;
 
-        private:
+        private: // methods
             // List of supported commands with a reference to the handler for this command.
             std::map<Command, FctCommandHandler> m_supportedCommands;
 

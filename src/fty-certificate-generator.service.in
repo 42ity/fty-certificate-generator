@@ -3,19 +3,27 @@
 
 [Unit]
 Description=fty-certificate-generator service
-After=network.target
-# Requires=network.target
-# Conflicts=shutdown.target
-# PartOf=fty-certificate-generator.target
+After=network.target malamute.service fty-envvars.service
+Requires=network.target malamute.service fty-envvars.service
+Conflicts=shutdown.target
+PartOf=bios.target
 
 [Service]
 Type=simple
-# User=@uid@
+User=bios
+EnvironmentFile=-@prefix@/share/bios/etc/default/bios
+EnvironmentFile=-@prefix@/share/bios/etc/default/bios__%n.conf
+EnvironmentFile=-@prefix@/share/fty/etc/default/fty
+EnvironmentFile=-@prefix@/share/fty/etc/default/fty__%n.conf
+EnvironmentFile=-@sysconfdir@/default/bios
+EnvironmentFile=-@sysconfdir@/default/bios__%n.conf
+EnvironmentFile=-@sysconfdir@/default/fty
+EnvironmentFile=-@sysconfdir@/default/fty__%n.conf
 Environment="prefix=@prefix@"
 Environment='SYSTEMD_UNIT_FULLNAME=%n'
-ExecStart=@prefix@/bin/fty-certificate-generator @sysconfdir@/@PACKAGE@/fty-certificate-generator.cfg
+EnvironmentFile=-/run/fty-envvars.env
+ExecStart=@prefix@/bin/fty-certificate-generator
 Restart=always
 
 [Install]
-WantedBy=multi-user.target
-# WantedBy=fty-certificate-generator.target
+WantedBy=bios.target

@@ -27,6 +27,18 @@
 */
 
 #include "fty_certificate_generator_classes.h"
+#include <chrono>
+#include <netdb.h>
+
+// because there is NO std::chrono::days in C++14
+#define HOURS_IN_DAY        24
+
+#define ORGANIZATION_UNIT   "Power quality"
+#define ORGANIZATION        "Eaton"
+#define LOCALITY            "Grenoble"
+#define STATE               "38"
+#define COUNTRY             "FR"
+#define EMAIL               "noemail"
 
 //  Structure of our class
 
@@ -84,10 +96,213 @@ namespace certgen
         }
     }
 
-    std::string CertificateGeneratorServer::handleGenerateSelfsignedCertificate(const fty::Payload & /*params*/)
+    static std::string getSystemHostname()
     {
-        std::string empty;
-        return empty;
+        char name[NI_MAXHOST];
+        int rv = gethostname (name, sizeof(name));
+        if (rv != 0)
+        {
+            throw std::runtime_error ("Error while getting hostname");
+        }
+
+        return std::string (name);
+    }
+
+    static std::list<std::string> getSystemDomainNames()
+    {
+        /* NOTE: host name resolution looks at first into /etc/hosts,
+         * but on our systems, that one contains just hostname without domain.
+         * Therefore, we will reuse fty-envvars which reads /etc/resolv.conf
+         * and therefore contains the FQDN(s) we want.
+         */
+        std::list<std::string> result;
+        const char *fqdns = ::getenv ("ENV_KNOWNFQDNS");
+        if (fqdns == NULL || streq (fqdns, ""))
+        {
+            log_warning ("no FQDNs found in the system");
+            return result;
+        }
+
+        std::stringstream fqdnsStr (fqdns);
+
+        std::string name;
+        // envvar contains comma-separated list of FQDNs
+        while (std::getline (fqdnsStr, name, ','))
+        {
+            std::cerr << "domain name: " << name << std::endl;
+            // skip localhost
+            if (name != "localhost")
+            {
+                result.push_back (name);
+            }
+        }
+
+        return result;
+    }
+
+    static bool isSystemWithoutDHCP ()
+    {
+        std::ifstream configFile ("/etc/network/interfaces");
+        if (!configFile)
+        {
+            throw std::runtime_error ("Could not open file " + std::string ("/etc/network/interfaces"));
+        }
+
+        configFile.exceptions ( std::ifstream::failbit | std::ifstream::badbit );
+        std::stringstream configInterfaces;
+        configInterfaces << configFile.rdbuf();
+        configFile.close ();
+
+        auto found = configInterfaces.str().find("dhcp");
+        return (found == std::string::npos);
+    }
+
+    static std::list<std::string> getSystemIPs()
+    {
+        struct ifaddrs *interfaces, *iface;
+        char host[NI_MAXHOST];
+        std::list<std::string> result;
+
+        if (getifaddrs (&interfaces) == -1)
+        {
+            throw std::runtime_error ("Unable to get IP adresses");
+        }
+        iface = interfaces;
+        for (iface = interfaces; iface != NULL; iface = iface->ifa_next)
+        {
+            if (iface->ifa_addr == NULL) continue;
+            int family = iface->ifa_addr->sa_family;
+            if ( getnameinfo(iface->ifa_addr,
+                    (family == AF_INET) ? sizeof(struct sockaddr_in) :
+                    sizeof(struct sockaddr_in6),
+                    host, NI_MAXHOST,
+                    NULL, 0, NI_NUMERICHOST) == 0
+               )
+            {
+                // sometimes IPv6 addres looks like ::2342%IfaceName
+                char *p = strchr (host, '%');
+                if (p) *p = 0;
+
+                // skip loopback
+                if (streq (host, "127.0.0.1") || streq (host, "::1"))
+                {
+                    continue;
+                }
+
+                log_error ("ip = %s", host);
+                auto it = std::find (result.begin(), result.end(), host);
+                if (it == result.end())
+                {
+                    result.push_back (host);
+                }
+            }
+        }
+        freeifaddrs (interfaces);
+        return result;
+    }
+
+    static fty::CertificateConfig loadConfig (const std::string & configVersion, const certgen::CertificateConfig & conf)
+    {
+
+        fty::CertificateConfig config;
+        // fill the configuration data
+        uint8_t version;
+        std::istringstream versionStr (configVersion);
+        versionStr >> version;
+        config.setVersion(version);
+
+        std::chrono::hours validityOffset (HOURS_IN_DAY * conf.getValidityOffset());
+        std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTimestamp =
+            std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
+        std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> startTimestamp = currentTimestamp + validityOffset;
+        config.setValidFrom(startTimestamp.time_since_epoch().count());
+
+        std::chrono::hours validity (HOURS_IN_DAY * conf.getValidity());
+        currentTimestamp = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
+        std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> endTimestamp = currentTimestamp + validity;
+        config.setValidTo(endTimestamp.time_since_epoch().count());
+
+        config.setCountry(COUNTRY);
+        config.setState(STATE);
+        config.setLocality(LOCALITY);
+        config.setOrganization(ORGANIZATION);
+        config.setOrganizationUnit(ORGANIZATION_UNIT);
+        //NOTE: this field can't be empty and should be used only if we don't have DNS names, so put hostname here
+        config.setCommonName(getSystemHostname());
+        config.setEmail(EMAIL);
+
+        std::list<std::string> dnsNames = getSystemDomainNames();
+
+        if (isSystemWithoutDHCP())
+        {
+            config.setIpList(getSystemIPs());
+        }
+        else if (dnsNames.empty())
+        {
+            throw std::runtime_error ("No IPs or FQDNs available for configuration of certificate generation");
+        }
+
+        config.setDnsList(dnsNames);
+
+        return config;
+    }
+
+    static Keys generateKeys (const KeyConfig & conf)
+    {
+        std::string keyType = conf.keyType();
+        if (keyType == "RSA")
+        {
+            KeyConfigRsaParams *rsaParams = dynamic_cast<KeyConfigRsaParams *>(conf.params().get());
+            return Keys::generateRSA(rsaParams->rsaLength());
+        }
+        else if (keyType == "EC")
+        {
+            KeyConfigECParams *ecParams = dynamic_cast<KeyConfigECParams *>(conf.params().get());
+            if (ecParams->ecCurveType() == "PRIME256v1")
+            {
+                return Keys::generateEC (ECKeyType::PRIME256V1);
+            }
+        }
+        throw std::runtime_error ("Invalid key type");
+    }
+
+    // TODO: ask security wallet to store the certificate
+    static void store (const CertificateX509 & cert, const StorageConfig & conf)
+    {
+    }
+
+
+    std::string CertificateGeneratorServer::handleGenerateSelfsignedCertificate(const fty::Payload & params)
+    {
+        if (params.empty() || params[0].empty ())
+        {
+            throw std::runtime_error ("Missing service name");
+        }
+
+        std::string serviceName (params[0]);
+        std::string configFilePath(CONFIG_PATH + serviceName + ".cfg");
+        std::ifstream configFile (configFilePath);
+        if (!configFile)
+        {
+            throw std::runtime_error ("Could not open file " + configFilePath);
+        }
+
+        configFile.exceptions ( std::ifstream::failbit | std::ifstream::badbit );
+        std::stringstream configJson;
+        configJson << configFile.rdbuf();
+        configFile.close ();
+
+        cxxtools::SerializationInfo certgenSi;
+        cxxtools::JsonDeserializer deserializer (configJson);
+        deserializer.deserialize (certgenSi);
+
+        CertificateGeneratorConfig certgenConfig;
+        certgenSi >>= certgenConfig;
+
+        fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
+
+        store (CertificateX509::selfSignSha256(generateKeys(certgenConfig.keyConf()), config), certgenConfig.storageConf());
+        return "OK";
     }
 
     std::string CertificateGeneratorServer::handleGenerateCSR(const fty::Payload & /*params*/)

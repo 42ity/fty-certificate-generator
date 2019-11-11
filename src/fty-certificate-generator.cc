@@ -28,8 +28,11 @@
 
 #include "fty_certificate_generator_classes.h"
 
+#define DEFAULT_ENDPOINT      "ipc://@/malamute"
+
 int main (int argc, char *argv [])
 {
+    using Arguments = std::map<std::string, std::string>;
     bool verbose = false;
     int argn;
     for (argn = 1; argn < argc; argn++) {
@@ -51,11 +54,32 @@ int main (int argc, char *argv [])
     }
 
     if (verbose)
-        //zsys_info ("fty-certificate-generator - ");
+    {
+        log_info ("fty-certificate-generator - ");
+    }
 
 //  Insert main code here
+    Arguments paramsCertgen;
 
+    paramsCertgen["AGENT_NAME"] = "fty-certificate-generator";
+    paramsCertgen["ENDPOINT"] = DEFAULT_ENDPOINT;
+    zactor_t *certgen_server = zactor_new (fty_certificate_generator_agent,  static_cast<void*>(&paramsCertgen));
 
+    while (true)
+    {
+        char *str = zstr_recv (certgen_server);
+        if (str)
+        {
+            puts (str);
+            zstr_free (&str);
+        }
+        else
+        {
+            //stop everything
+            break;
+        }
+    }
 
+    zactor_destroy(&certgen_server);
     return 0;
 }
