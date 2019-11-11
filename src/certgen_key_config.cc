@@ -28,6 +28,8 @@
 
 #include "certgen_key_config.h"
 
+#include <functional>
+
 //  Structure of our class
 namespace certgen
 {
