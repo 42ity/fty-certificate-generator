@@ -50,7 +50,7 @@ namespace certgen
             std::string handleImportCertificate(const fty::Payload & params);
 
             // attributes
-            std::unique_ptr<fty::Keys> m_csrKey; // needed to import an existing certificate correctly 
+            std::map<std::string, fty::CsrX509 &> m_csrPending; // needed to import an existing certificate correctly 
     };
 
 } // namescpace certgen

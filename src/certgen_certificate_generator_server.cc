@@ -53,8 +53,6 @@ namespace certgen
         m_supportedCommands[GENERATE_SELFSIGNED_CERTIFICATE] = std::bind(&CertificateGeneratorServer::handleGenerateSelfsignedCertificate, this, _1);
         m_supportedCommands[GENERATE_CSR] = std::bind(&CertificateGeneratorServer::handleGenerateCSR, this, _1);
         m_supportedCommands[IMPORT_CERTIFICATE] = std::bind(&CertificateGeneratorServer::handleImportCertificate, this, _1);
-
-        m_csrKey = nullptr;
     }
 
     Payload CertificateGeneratorServer::handleRequest(const Sender & /*sender*/, const Payload & payload)
@@ -327,22 +325,19 @@ namespace certgen
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
-        std::string csrPem;
+        fty::Keys keyPair(generateKeys(certgenConfig.keyConf()));
 
-        // TODO should we implement copy ctor on Keys??
-        m_csrKey.reset(new Keys(generateKeys(certgenConfig.keyConf())));
+        fty::CsrX509 csr = CsrX509::generateCsr(keyPair, config);
 
-        try
+        // replace existing csr for a given service, if any
+        auto searchPendingCsr = m_csrPending.find(serviceName);
+        if (searchPendingCsr != m_csrPending.end())
         {
-            CsrX509 csr = CsrX509::generateCsr(*(m_csrKey.get()), config);
-            csrPem = csr.getPem();
+            m_csrPending.erase(serviceName);    // delete old request
         }
-        catch(std::runtime_error &e)
-        {
-            throw std::runtime_error ("CSR generation failed: " + std::string(e.what()));
-        }
+        m_csrPending.insert({serviceName, csr});
 
-        return csrPem;
+        return csr.getPem();
     }
 
     std::string CertificateGeneratorServer::handleImportCertificate(const fty::Payload & params)
@@ -359,27 +354,29 @@ namespace certgen
         {
             throw std::runtime_error ("Empty certificate PEM");
         }
-
-        if (m_csrKey == nullptr)
-        {
-            throw std::runtime_error ("No pending CSR request");
-        }
        
         std::string serviceName (params[0]);
         std::string certPem (params[1]);
+
+        auto searchPendingCsr = m_csrPending.find(serviceName);
+
+        if (searchPendingCsr == m_csrPending.end())
+        {
+            throw std::runtime_error ("No pending CSR request for service " + serviceName);
+        }
 
         CertificateGeneratorConfig certgenConfig = getConfig(serviceName);        
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
-        CertificateX509 tmpCert(certPem);
+        fty::CertificateX509 tmpCert(certPem);
 
-        if (tmpCert.getPublicKey() != m_csrKey->getPublicKey())
+        if (tmpCert.getPublicKey() != m_csrPending.at(serviceName).getPublicKey())
         {
             throw std::runtime_error("Imported key does not match the signature of the pending CRS");
         }
         
-        m_csrKey.reset();
+        m_csrPending.erase(serviceName);
 
         store (tmpCert, certgenConfig.storageConf());
         return "OK";
