@@ -25,9 +25,12 @@
 //  Include the project library file
 #include "fty_certificate_generator_library.h"
 
-// common command list
-static constexpr const char* GENERATE_SELFSIGNED_CERTIFICATE = "GENERATE_SELFSIGNED_CERTIFICATE";
-static constexpr const char* GENERATE_CSR = "GENERATE_CSR";
-static constexpr const char* IMPORT_CERTIFICATE = "IMPORT_CERTIFICATE";
+// common command list for certgen
+namespace certgen
+{
+    static constexpr const char* GENERATE_SELFSIGNED_CERTIFICATE = "GENERATE_SELFSIGNED_CERTIFICATE";
+    static constexpr const char* GENERATE_CSR = "GENERATE_CSR";
+    static constexpr const char* IMPORT_CERTIFICATE = "IMPORT_CERTIFICATE";
+}
 
 #endif
