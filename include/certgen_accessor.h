@@ -23,12 +23,6 @@
 #ifndef CERTGEN_ACCESSOR_H_INCLUDED
 #define CERTGEN_ACCESSOR_H_INCLUDED
 
-#include <fty_log.h>
-#include <fty_common_mlm.h>
-
-#include <vector>
-#include <cxxtools/serializationinfo.h>
-
 namespace certgen
 {
     /**

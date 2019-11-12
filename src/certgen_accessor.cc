@@ -20,7 +20,10 @@
 */
 
 #include "fty_certificate_generator_classes.h"
+
 #include "certgen_accessor.h"
+
+#include <fty_common_mlm.h>
 
 //  Structure of our class
 namespace certgen
