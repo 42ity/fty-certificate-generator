@@ -19,6 +19,7 @@
     =========================================================================
 */
 
+#include "fty_certificate_generator_classes.h"
 #include "certgen_accessor.h"
 
 //  Structure of our class
