@@ -53,6 +53,8 @@ namespace certgen
         m_supportedCommands[GENERATE_SELFSIGNED_CERTIFICATE] = std::bind(&CertificateGeneratorServer::handleGenerateSelfsignedCertificate, this, _1);
         m_supportedCommands[GENERATE_CSR] = std::bind(&CertificateGeneratorServer::handleGenerateCSR, this, _1);
         m_supportedCommands[IMPORT_CERTIFICATE] = std::bind(&CertificateGeneratorServer::handleImportCertificate, this, _1);
+
+        m_csrKey = nullptr;
     }
 
     Payload CertificateGeneratorServer::handleRequest(const Sender & /*sender*/, const Payload & payload)
@@ -327,9 +329,12 @@ namespace certgen
 
         std::string csrPem;
 
+        // TODO should we implement copy ctor on Keys??
+        m_csrKey.reset(new Keys(generateKeys(certgenConfig.keyConf())));
+
         try
         {
-            CsrX509 csr = CsrX509::generateCsr(generateKeys(certgenConfig.keyConf()), config);
+            CsrX509 csr = CsrX509::generateCsr(*(m_csrKey.get()), config);
             csrPem = csr.getPem();
         }
         catch(std::runtime_error &e)
@@ -354,6 +359,11 @@ namespace certgen
         {
             throw std::runtime_error ("Empty certificate PEM");
         }
+
+        if (m_csrKey == nullptr)
+        {
+            throw std::runtime_error ("No pending CSR request");
+        }
        
         std::string serviceName (params[0]);
         std::string certPem (params[1]);
@@ -362,8 +372,17 @@ namespace certgen
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
+        CertificateX509 tmpCert(certPem);
 
-        store (CertificateX509(certPem), certgenConfig.storageConf());
+        // TODO check only public key??
+        if (tmpCert.getPublicKey() != m_csrKey->getPublicKey())
+        {
+            throw std::runtime_error("Imported key does not match the signature of the pending CRS");
+        }
+        
+        m_csrKey.reset();
+
+        store (tmpCert, certgenConfig.storageConf());
         return "OK";
     }
 
