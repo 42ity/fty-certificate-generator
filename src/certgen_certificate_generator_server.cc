@@ -250,7 +250,7 @@ namespace certgen
     }
 
     // read config helper function
-    static CertificateGeneratorConfig generateConfig(const std::string & serviceName)
+    static CertificateGeneratorConfig getConfig(const std::string & serviceName)
     {
         std::string configFilePath(CONFIG_PATH + serviceName + ".cfg");
         std::ifstream configFile (configFilePath);
@@ -307,7 +307,7 @@ namespace certgen
         }
 
         std::string serviceName (params[0]);
-        CertificateGeneratorConfig certgenConfig = generateConfig(serviceName);        
+        CertificateGeneratorConfig certgenConfig = getConfig(serviceName);        
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
@@ -323,7 +323,7 @@ namespace certgen
         }
 
         std::string serviceName (params[0]);
-        CertificateGeneratorConfig certgenConfig = generateConfig(serviceName);        
+        CertificateGeneratorConfig certgenConfig = getConfig(serviceName);        
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
@@ -368,7 +368,7 @@ namespace certgen
         std::string serviceName (params[0]);
         std::string certPem (params[1]);
 
-        CertificateGeneratorConfig certgenConfig = generateConfig(serviceName);        
+        CertificateGeneratorConfig certgenConfig = getConfig(serviceName);        
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
