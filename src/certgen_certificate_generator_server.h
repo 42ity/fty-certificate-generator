@@ -51,12 +51,6 @@ namespace certgen
 
             // attributes
             std::unique_ptr<fty::Keys> m_csrKey; // needed to import an existing certificate correctly 
-
-        public:
-            //Command list
-            static constexpr const char* GENERATE_SELFSIGNED_CERTIFICATE = "GENERATE_SELFSIGNED_CERTIFICATE";
-            static constexpr const char* GENERATE_CSR = "GENERATE_CSR";
-            static constexpr const char* IMPORT_CERTIFICATE = "IMPORT_CERTIFICATE";
     };
 
 } // namescpace certgen

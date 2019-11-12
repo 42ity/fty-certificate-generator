@@ -23,8 +23,6 @@
 #ifndef CERTGEN_ACCESSOR_H_INCLUDED
 #define CERTGEN_ACCESSOR_H_INCLUDED
 
-#include "certgen_certificate_generator_commands.h"
-
 #include <fty_log.h>
 #include <fty_common_mlm.h>
 
