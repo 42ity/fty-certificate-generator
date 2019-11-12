@@ -374,7 +374,6 @@ namespace certgen
 
         CertificateX509 tmpCert(certPem);
 
-        // TODO check only public key??
         if (tmpCert.getPublicKey() != m_csrKey->getPublicKey())
         {
             throw std::runtime_error("Imported key does not match the signature of the pending CRS");
