@@ -51,7 +51,7 @@ namespace certgen
          * 
          * @return CSR PEM
          */
-        std::string generateCsr(const std::string & serviceName) const;
+        fty::CsrX509 generateCsr(const std::string & serviceName) const;
 
         /**
          * @brief import certificate

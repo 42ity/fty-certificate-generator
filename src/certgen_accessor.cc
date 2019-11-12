@@ -39,11 +39,11 @@ namespace certgen
         fty::Payload payload = sendCommand(GENERATE_SELFSIGNED_CERTIFICATE, {serviceName});
     }
 
-    std::string CertGenAccessor::generateCsr(const std::string & serviceName) const
+    fty::CsrX509 CertGenAccessor::generateCsr(const std::string & serviceName) const
     {
         fty::Payload payload = sendCommand(GENERATE_CSR, {serviceName});
 
-        return payload[0];
+        return fty::CsrX509(payload[0]);
     }
 
     void CertGenAccessor::importCertificate(
