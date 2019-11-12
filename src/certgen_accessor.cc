@@ -36,28 +36,12 @@ namespace certgen
         const std::string & serviceName
     ) const
     {
-        fty::Payload payload;
-        try
-        {
-            payload = sendCommand(GENERATE_SELFSIGNED_CERTIFICATE, {serviceName});
-        }
-        catch (const std::exception& e)
-        {
-            log_info("certificate generator accessor returned '%s'", e.what());
-        }
+        fty::Payload payload = sendCommand(GENERATE_SELFSIGNED_CERTIFICATE, {serviceName});
     }
 
     std::string CertGenAccessor::generateCsr(const std::string & serviceName) const
     {
-        fty::Payload payload;
-        try
-        {
-            payload = sendCommand(GENERATE_CSR, {serviceName});
-        }
-        catch (const std::exception& e)
-        {
-            log_info("certificate generator accessor returned '%s'", e.what());
-        }
+        fty::Payload payload = sendCommand(GENERATE_CSR, {serviceName});
 
         return payload[0];
     }
@@ -67,15 +51,7 @@ namespace certgen
         const std::string & cert
     ) const
     {
-        fty::Payload payload;
-        try
-        {
-            payload = sendCommand(IMPORT_CERTIFICATE, {serviceName, cert});
-        }
-        catch (const std::exception& e)
-        {
-            log_info("certificate generator accessor returned '%s'", e.what());
-        }
+        fty::Payload payload = sendCommand(IMPORT_CERTIFICATE, {serviceName, cert});
     }
 
     // send helper function
@@ -99,7 +75,7 @@ namespace certgen
             }
             else
             {
-                throw std::runtime_error("Missing data for error");
+                throw std::runtime_error("Unknown error");
             }
         }
 
