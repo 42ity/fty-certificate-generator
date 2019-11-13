@@ -100,7 +100,7 @@ std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClien
     {
         //test 1.1 => test retrieve a mapping
         testNumber = "1.1";
-        testName = "generateSelfCertificateReq => existing mapping";
+        testName = "generateSelfCertificateReq";
         printf("\n-----------------------------------------------------------------------\n");
         {
             printf(" *=>  Test #%s %s\n", testNumber.c_str(), testName.c_str());

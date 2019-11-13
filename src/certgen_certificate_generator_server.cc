@@ -425,7 +425,7 @@ certgen_certificate_generator_server_test (bool verbose)
     Arguments agentParams;
 
     agentParams["AGENT_NAME"] = "certgen-test-agent";
-    agentParams["CONFIG_PATH"] = SELFTEST_DIR_RO"/config/";
+    agentParams["CONFIG_PATH"] = SELFTEST_DIR_RO"/cfg/";
     agentParams["ENDPOINT"] = endpoint;
 
     //start broker agent
