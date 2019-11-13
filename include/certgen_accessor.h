@@ -85,4 +85,6 @@ namespace certgen
     };
 } // namescpace certgen
 
+std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClient & syncClient);
+
 #endif

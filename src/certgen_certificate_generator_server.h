@@ -26,8 +26,6 @@
 #include <functional>
 #include <memory>
 
-#define CONFIG_PATH "/etc/fty/fty-certificate-generator/"
-
 namespace certgen
 {
     using Command   = std::string;
@@ -37,20 +35,21 @@ namespace certgen
     class CertificateGeneratorServer final : public fty::SyncServer
     {
         public:
-            explicit CertificateGeneratorServer();
+            explicit CertificateGeneratorServer(const std::string & configPath);
             fty::Payload handleRequest(const fty::Sender & sender, const fty::Payload & payload) override;
 
         private: // methods
             // List of supported commands with a reference to the handler for this command.
+            std::string m_configPath;
+            
             std::map<Command, FctCommandHandler> m_supportedCommands;
+            std::map<std::string, fty::CsrX509> m_csrPending; // needed to import an existing certificate correctly 
+
 
             // Handlers for all supported commands
             std::string handleGenerateSelfsignedCertificate(const fty::Payload & params);
             std::string handleGenerateCSR(const fty::Payload & params);
             std::string handleImportCertificate(const fty::Payload & params);
-
-            // attributes
-            std::map<std::string, fty::CsrX509 &> m_csrPending; // needed to import an existing certificate correctly 
     };
 
 } // namescpace certgen

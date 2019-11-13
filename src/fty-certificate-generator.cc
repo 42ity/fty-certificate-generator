@@ -62,6 +62,7 @@ int main (int argc, char *argv [])
     Arguments paramsCertgen;
 
     paramsCertgen["AGENT_NAME"] = "fty-certificate-generator";
+    paramsCertgen["CONFIG_PATH"] = "/etc/fty/fty-certificate-generator/";
     paramsCertgen["ENDPOINT"] = DEFAULT_ENDPOINT;
     zactor_t *certgen_server = zactor_new (fty_certificate_generator_agent,  static_cast<void*>(&paramsCertgen));
 

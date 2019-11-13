@@ -82,3 +82,44 @@ namespace certgen
         return recMessage;    
     }
 } // namescpace certgen
+
+//  --------------------------------------------------------------------------
+//  Test of this class => This is used by certgen_certificate_generator_server_test
+//  --------------------------------------------------------------------------
+
+
+std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClient & syncClient)
+{
+    std::vector<std::pair<std::string,bool>> testsResults;
+  
+    using namespace certgen;
+
+    std::string testNumber, testName;
+
+    //test 1.X
+    {
+        //test 1.1 => test retrieve a mapping
+        testNumber = "1.1";
+        testName = "generateSelfCertificateReq => existing mapping";
+        printf("\n-----------------------------------------------------------------------\n");
+        {
+            printf(" *=>  Test #%s %s\n", testNumber.c_str(), testName.c_str());
+            try
+            {
+                CertGenAccessor accessor(syncClient);
+                accessor.generateSelfCertificateReq("test");
+                printf(" *<=  Test #%s > Ok\n", testNumber.c_str());
+                testsResults.emplace_back (" Test #"+testNumber+" "+testName,true);
+            }
+            catch(const std::runtime_error& e)
+            {
+                printf (" *<=  Test #%s > Failed\n", testNumber.c_str ());
+                printf ("Error: %s\n", e.what ());
+                testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
+            }
+        }
+    } // 1.X
+  
+
+  return testsResults;
+}
