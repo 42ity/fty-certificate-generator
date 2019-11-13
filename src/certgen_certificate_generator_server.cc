@@ -247,6 +247,31 @@ namespace certgen
         return config;
     }
 
+    // read config helper function
+    static CertificateGeneratorConfig getConfig(const std::string & serviceName)
+    {
+        std::string configFilePath(CONFIG_PATH + serviceName + ".cfg");
+        std::ifstream configFile (configFilePath);
+        if (!configFile)
+        {
+            throw std::runtime_error ("Could not open file " + configFilePath);
+        }
+
+        configFile.exceptions ( std::ifstream::failbit | std::ifstream::badbit );
+        std::stringstream configJson;
+        configJson << configFile.rdbuf();
+        configFile.close ();
+
+        cxxtools::SerializationInfo certgenSi;
+        cxxtools::JsonDeserializer deserializer (configJson);
+        deserializer.deserialize (certgenSi);
+
+        CertificateGeneratorConfig certgenConfig;
+        certgenSi >>= certgenConfig;
+
+        return certgenConfig;
+    }
+
     static Keys generateKeys (const KeyConfig & conf)
     {
         std::string keyType = conf.keyType();
@@ -280,24 +305,7 @@ namespace certgen
         }
 
         std::string serviceName (params[0]);
-        std::string configFilePath(CONFIG_PATH + serviceName + ".cfg");
-        std::ifstream configFile (configFilePath);
-        if (!configFile)
-        {
-            throw std::runtime_error ("Could not open file " + configFilePath);
-        }
-
-        configFile.exceptions ( std::ifstream::failbit | std::ifstream::badbit );
-        std::stringstream configJson;
-        configJson << configFile.rdbuf();
-        configFile.close ();
-
-        cxxtools::SerializationInfo certgenSi;
-        cxxtools::JsonDeserializer deserializer (configJson);
-        deserializer.deserialize (certgenSi);
-
-        CertificateGeneratorConfig certgenConfig;
-        certgenSi >>= certgenConfig;
+        CertificateGeneratorConfig certgenConfig = getConfig(serviceName);        
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
@@ -305,16 +313,73 @@ namespace certgen
         return "OK";
     }
 
-    std::string CertificateGeneratorServer::handleGenerateCSR(const fty::Payload & /*params*/)
+    std::string CertificateGeneratorServer::handleGenerateCSR(const fty::Payload & params)
     {
-        std::string empty;
-        return empty;
+        if (params.empty() || params[0].empty ())
+        {
+            throw std::runtime_error ("Missing service name");
+        }
+
+        std::string serviceName (params[0]);
+        CertificateGeneratorConfig certgenConfig = getConfig(serviceName);        
+
+        fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
+
+        fty::Keys keyPair(generateKeys(certgenConfig.keyConf()));
+
+        fty::CsrX509 csr = CsrX509::generateCsr(keyPair, config);
+
+        // replace existing csr for a given service, if any
+        auto searchPendingCsr = m_csrPending.find(serviceName);
+        if (searchPendingCsr != m_csrPending.end())
+        {
+            m_csrPending.erase(serviceName);    // delete old request
+        }
+        m_csrPending.insert({serviceName, csr});
+
+        return csr.getPem();
     }
 
-    std::string CertificateGeneratorServer::handleImportCertificate(const fty::Payload & /*params*/)
+    std::string CertificateGeneratorServer::handleImportCertificate(const fty::Payload & params)
     {
-        std::string empty;
-        return empty;
+        if (params.size() != 2)
+        {
+            throw std::runtime_error ("Wrong number of parameters");
+        }
+        else if (params[0].empty ())
+        {
+            throw std::runtime_error ("Empty service name");
+        }
+        else if (params[1].empty ())
+        {
+            throw std::runtime_error ("Empty certificate PEM");
+        }
+       
+        std::string serviceName (params[0]);
+        std::string certPem (params[1]);
+
+        auto searchPendingCsr = m_csrPending.find(serviceName);
+
+        if (searchPendingCsr == m_csrPending.end())
+        {
+            throw std::runtime_error ("No pending CSR request for service " + serviceName);
+        }
+
+        CertificateGeneratorConfig certgenConfig = getConfig(serviceName);        
+
+        fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
+
+        fty::CertificateX509 tmpCert(certPem);
+
+        if (tmpCert.getPublicKey() != m_csrPending.at(serviceName).getPublicKey())
+        {
+            throw std::runtime_error("Imported key does not match the signature of the pending CRS");
+        }
+        
+        m_csrPending.erase(serviceName);
+
+        store (tmpCert, certgenConfig.storageConf());
+        return "OK";
     }
 
 } // namescpace certgen

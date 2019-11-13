@@ -22,8 +22,9 @@
 #ifndef CERTGEN_CERTIFICATE_GENERATOR_SERVER_H_INCLUDED
 #define CERTGEN_CERTIFICATE_GENERATOR_SERVER_H_INCLUDED
 
-#include <functional>
 #include <fty_common_sync_server.h>
+#include <functional>
+#include <memory>
 
 #define CONFIG_PATH "/etc/fty/fty-certificate-generator/"
 
@@ -48,11 +49,8 @@ namespace certgen
             std::string handleGenerateCSR(const fty::Payload & params);
             std::string handleImportCertificate(const fty::Payload & params);
 
-        public:
-            //Command list
-            static constexpr const char* GENERATE_SELFSIGNED_CERTIFICATE = "GENERATE_SELFSIGNED_CERTIFICATE";
-            static constexpr const char* GENERATE_CSR = "GENERATE_CSR";
-            static constexpr const char* IMPORT_CERTIFICATE = "IMPORT_CERTIFICATE";
+            // attributes
+            std::map<std::string, fty::CsrX509 &> m_csrPending; // needed to import an existing certificate correctly 
     };
 
 } // namescpace certgen

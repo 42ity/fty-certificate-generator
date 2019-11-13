@@ -1,5 +1,6 @@
-/*  =========================================================================
-    certgen_accessor - class description
+// TODO update description
+/*  ========================================================================
+    certgen_accessor - accessor to interface with certgen library
 
     Copyright (C) 2014 - 2019 Eaton
 
@@ -16,7 +17,7 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-    =========================================================================
+    ========================================================================
 */
 
 #ifndef CERTGEN_ACCESSOR_H_INCLUDED
@@ -24,7 +25,67 @@
 
 namespace certgen
 {
+    /**
+   * @brief access to certgen agent: 
+   * @exception std::runtime_error
+   */
+    class CertGenAccessor
+    {
+        /**
+         * Class methods
+         */
+        public:
+        explicit CertGenAccessor(fty::SyncClient & reqClient);
+        
+        ~CertGenAccessor() = default;
 
+        /**
+         * @brief send request to generate self certificate
+         * @param serviceName name of the service
+         */
+        void generateSelfCertificateReq(const std::string & serviceName) const;
+
+        /**
+         * @brief generate certificate signing request (CSR)
+         * @param serviceName name of the service
+         * 
+         * @return CSR PEM
+         */
+        fty::CsrX509 generateCsr(const std::string & serviceName) const;
+
+        /**
+         * @brief import certificate
+         * @param serviceName name of the service
+         * @param cert PEM certificate
+         */
+        void importCertificate(
+            const std::string & serviceName,
+            const std::string & cert
+        ) const;
+
+
+        private:
+        /**
+         * @brief helper function to send a command
+         *
+         * @param command command to send
+         * @param data array of strings containing data
+         */
+        fty::Payload sendCommand
+        (
+            const std::string & command,
+            const fty::Payload & data
+        ) const;
+
+        /**
+         * Class attributes
+         */
+        private:
+        fty::SyncClient & m_requestClient;
+    };
 } // namescpace certgen
+
+//  Self test of this class
+void certgen_accessor_test (bool verbose);
 
 #endif

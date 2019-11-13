@@ -50,6 +50,7 @@ all_tests [] = {
 #endif // FTY_CERTIFICATE_GENERATOR_BUILD_DRAFT_API
 #ifdef FTY_CERTIFICATE_GENERATOR_BUILD_DRAFT_API
 // Tests for draft public classes:
+    { "certgen_accessor", certgen_accessor_test, false, true, NULL },
     { "fty_certificate_generator_agent", fty_certificate_generator_agent_test, false, true, NULL },
 #endif // FTY_CERTIFICATE_GENERATOR_BUILD_DRAFT_API
     {NULL, NULL, 0, 0, NULL}          //  Sentinel

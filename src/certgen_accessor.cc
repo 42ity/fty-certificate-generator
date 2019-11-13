@@ -1,5 +1,5 @@
 /*  =========================================================================
-    certgen_accessor - class description
+    certgen_accessor - accessor to interface with certgen library
 
     Copyright (C) 2014 - 2019 Eaton
 
@@ -19,16 +19,79 @@
     =========================================================================
 */
 
-/*
-@header
-    certgen_accessor -
-@discuss
-@end
-*/
+#include "fty_certificate_generator_classes.h"
+
+#include "certgen_accessor.h"
+
+#include <fty_common_mlm.h>
 
 //  Structure of our class
 namespace certgen
 {
+    CertGenAccessor::CertGenAccessor(fty::SyncClient & reqClient)
+        : m_requestClient (reqClient)
+    {}
 
+    void CertGenAccessor::generateSelfCertificateReq(
+        const std::string & serviceName
+    ) const
+    {
+        fty::Payload payload = sendCommand(GENERATE_SELFSIGNED_CERTIFICATE, {serviceName});
+    }
+
+    fty::CsrX509 CertGenAccessor::generateCsr(const std::string & serviceName) const
+    {
+        fty::Payload payload = sendCommand(GENERATE_CSR, {serviceName});
+
+        return fty::CsrX509(payload[0]);
+    }
+
+    void CertGenAccessor::importCertificate(
+        const std::string & serviceName,
+        const std::string & cert
+    ) const
+    {
+        fty::Payload payload = sendCommand(IMPORT_CERTIFICATE, {serviceName, cert});
+    }
+
+    // send helper function
+    fty::Payload CertGenAccessor::sendCommand(
+        const std::string & command,
+        const fty::Payload & data
+    ) const
+    {
+        fty::Payload payload = {command};
+
+        std::copy(data.begin(), data.end(), back_inserter(payload));
+
+        fty::Payload recMessage = m_requestClient.syncRequestWithReply(payload);
+
+        if(recMessage[0] == "ERROR")
+        {
+            // error - throw exception
+            if(recMessage.size() == 2)
+            {
+                throw std::runtime_error(recMessage.at(1));
+            }
+            else
+            {
+                throw std::runtime_error("Unknown error");
+            }
+        }
+
+        return recMessage;    
+    }
 } // namescpace certgen
 
+
+//  Self test of this class
+
+#define SELFTEST_DIR_RO "src/selftest-ro"
+#define SELFTEST_DIR_RW "src/selftest-rw"
+
+void certgen_accessor_test (bool verbose)
+{
+    printf (" * certgen_accessor: ");
+
+    printf ("OK\n");
+}
