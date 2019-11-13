@@ -54,6 +54,8 @@ namespace certgen
         m_supportedCommands[GENERATE_SELFSIGNED_CERTIFICATE] = std::bind(&CertificateGeneratorServer::handleGenerateSelfsignedCertificate, this, _1);
         m_supportedCommands[GENERATE_CSR] = std::bind(&CertificateGeneratorServer::handleGenerateCSR, this, _1);
         m_supportedCommands[IMPORT_CERTIFICATE] = std::bind(&CertificateGeneratorServer::handleImportCertificate, this, _1);
+        m_supportedCommands[GET_PENDING_CSR] = std::bind(&CertificateGeneratorServer::handleGetPendingCSR, this, _1);
+        m_supportedCommands[REMOVE_PENDING_CSR] = std::bind(&CertificateGeneratorServer::handleRemovePendingCSR, this, _1);
     }
 
     Payload CertificateGeneratorServer::handleRequest(const Sender & /*sender*/, const Payload & payload)
@@ -331,11 +333,7 @@ namespace certgen
         fty::CsrX509 csr = CsrX509::generateCsr(keyPair, config);
 
         // replace existing csr for a given service, if any
-        auto searchPendingCsr = m_csrPending.find(serviceName);
-        if (searchPendingCsr != m_csrPending.end())
-        {
-            m_csrPending.erase(serviceName);    // delete old request
-        }
+        m_csrPending.erase(serviceName);    // delete old request
         m_csrPending.insert({serviceName, csr});
 
         return csr.getPem();
@@ -372,7 +370,7 @@ namespace certgen
 
         fty::CertificateX509 tmpCert(certPem);
 
-        if (tmpCert.getPublicKey() != m_csrPending.at(serviceName).getPublicKey())
+        if (tmpCert.getPublicKey() != searchPendingCsr->second.getPublicKey())
         {
             throw std::runtime_error("Imported key does not match the signature of the pending CRS");
         }
@@ -381,6 +379,37 @@ namespace certgen
 
         store (tmpCert, certgenConfig.storageConf());
         return "OK";
+    }
+
+    std::string CertificateGeneratorServer::handleGetPendingCSR(const fty::Payload & params)
+    {
+        if (params.empty() || params[0].empty ())
+        {
+            throw std::runtime_error ("Missing service name");
+        }
+       
+        std::string serviceName (params[0]);
+
+        auto searchPendingCsr = m_csrPending.find(serviceName);
+
+        if (searchPendingCsr == m_csrPending.end())
+        {
+            throw std::runtime_error ("No pending CSR request for service " + serviceName);
+        }
+
+        return m_csrPending.at(serviceName).getPem();
+    }
+
+    std::string CertificateGeneratorServer::handleRemovePendingCSR(const fty::Payload & params)
+    {
+        if (params.empty() || params[0].empty ())
+        {
+            throw std::runtime_error ("Missing service name");
+        }
+       
+        std::string serviceName (params[0]);
+
+        m_csrPending.erase(serviceName);
     }
 
 } // namescpace certgen

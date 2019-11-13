@@ -34,24 +34,36 @@ namespace certgen
 
     void CertGenAccessor::generateSelfCertificateReq(
         const std::string & serviceName
-    ) const
+    )
     {
         fty::Payload payload = sendCommand(GENERATE_SELFSIGNED_CERTIFICATE, {serviceName});
     }
 
-    fty::CsrX509 CertGenAccessor::generateCsr(const std::string & serviceName) const
+    fty::CsrX509 CertGenAccessor::generateCsr(const std::string & serviceName)
     {
         fty::Payload payload = sendCommand(GENERATE_CSR, {serviceName});
 
-        return fty::CsrX509(payload[0]);
+        return fty::CsrX509(payload.at(0));
     }
 
     void CertGenAccessor::importCertificate(
         const std::string & serviceName,
         const std::string & cert
-    ) const
+    )
     {
         fty::Payload payload = sendCommand(IMPORT_CERTIFICATE, {serviceName, cert});
+    }
+
+    fty::CsrX509 CertGenAccessor::getPendingCsr(const std::string & serviceName) const
+    {
+        fty::Payload payload = sendCommand(GET_PENDING_CSR, {serviceName});
+
+        return fty::CsrX509(payload.at(0));
+    }
+
+    void CertGenAccessor::removePendingCsr(const std::string & serviceName)
+    {
+        fty::Payload payload = sendCommand(REMOVE_PENDING_CSR, {serviceName});
     }
 
     // send helper function
@@ -98,7 +110,7 @@ std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClien
 
     //test 1.X
     {
-        //test 1.1 => generate self signed certificate
+        //test 1.1
         testNumber = "1.1";
         testName = "generateSelfCertificateReq => valid configuration file";
         printf("\n-----------------------------------------------------------------------\n");
@@ -119,7 +131,7 @@ std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClien
             }
         }
         
-        //test 1.2 => generate self signed certificate (non existing config file)
+        //test 1.2
         testNumber = "1.2";
         testName = "generateSelfCertificateReq => invalid configuration file";
         printf("\n-----------------------------------------------------------------------\n");
@@ -131,6 +143,8 @@ std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClien
                 accessor.generateSelfCertificateReq("fail");
                 printf(" *<=  Test #%s > Ok\n", testNumber.c_str());
                 testsResults.emplace_back (" Test #"+testNumber+" "+testName,true);
+
+                throw std::invalid_argument("Found configuration file");
             }
             catch(const std::runtime_error& e)
             {
@@ -149,7 +163,7 @@ std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClien
     
     //test 2.X
     {
-        //test 2.1 => generate self CSR
+        //test 2.1
         testNumber = "2.1";
         testName = "generateCsr => success case";
         printf("\n-----------------------------------------------------------------------\n");
@@ -170,7 +184,7 @@ std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClien
             }
         }
         
-        //test 2.2 => generate self signed certificate (non existing config file)
+        //test 2.2
         testNumber = "2.2";
         testName = "generateCsr => create two requests for the same service";
         printf("\n-----------------------------------------------------------------------\n");
@@ -202,7 +216,7 @@ std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClien
             }
         }
         
-        //test 2.3 => generate self signed certificate (non existing config file)
+        //test 2.3
         testNumber = "2.3";
         testName = "generateCsr => create two requests for two different services";
         printf("\n-----------------------------------------------------------------------\n");
@@ -234,13 +248,114 @@ std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClien
                 testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
             }
         }
+    
     } // 2.X
     
     //test 3.X
+    {
+        //test 3.1
+        testNumber = "3.1";
+        testName = "getPendingCsr => get existing pending CSR";
+        printf("\n-----------------------------------------------------------------------\n");
+        {
+            printf(" *=>  Test #%s %s\n", testNumber.c_str(), testName.c_str());
+            try
+            {
+                CertGenAccessor accessor(syncClient);
+                fty::CsrX509 csr = accessor.generateCsr("service-1");
+
+                fty::CsrX509 csrRet = accessor.getPendingCsr("service-1");
+
+                if(csr.getPublicKey().getPem() != csrRet.getPublicKey().getPem())
+                {
+                    printf (" *<=  Test #%s > Failed\n", testNumber.c_str ());
+                    printf ("Error: %s\n", "PEM does not match");
+                    testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
+                }
+                else
+                {
+                    printf(" *<=  Test #%s > Ok\n", testNumber.c_str());
+                    testsResults.emplace_back (" Test #"+testNumber+" "+testName,true);
+                }
+            }
+            catch(const std::exception& e)
+            {
+                printf (" *<=  Test #%s > Failed\n", testNumber.c_str ());
+                printf ("Error: %s\n", e.what ());
+                testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
+            }
+        }
+
+        //test 3.2
+        testNumber = "3.2";
+        testName = "getPendingCsr => try to get pending CSR which does not exist";
+        printf("\n-----------------------------------------------------------------------\n");
+        {
+            printf(" *=>  Test #%s %s\n", testNumber.c_str(), testName.c_str());
+            try
+            {
+                CertGenAccessor accessor(syncClient);
+
+                accessor.removePendingCsr("service-1");
+
+                fty::CsrX509 csrRet = accessor.getPendingCsr("service-1");
+
+                throw std::invalid_argument("CSR has been found");
+            }
+            catch(const std::runtime_error& e)
+            {
+                printf(" *<=  Test #%s > Ok\n", testNumber.c_str());
+                testsResults.emplace_back (" Test #"+testNumber+" "+testName, true);
+            }
+            catch(const std::exception& e)
+            {
+                printf (" *<=  Test #%s > Failed\n", testNumber.c_str ());
+                printf ("Error: %s\n", e.what ());
+                testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
+            }
+        }
+
+        //test 3.3
+        testNumber = "3.3";
+        testName = "getPendingCsr => get pending CSR for two different services";
+        printf("\n-----------------------------------------------------------------------\n");
+        {
+            printf(" *=>  Test #%s %s\n", testNumber.c_str(), testName.c_str());
+            try
+            {
+                CertGenAccessor accessor(syncClient);
+                fty::CsrX509 csr1 = accessor.generateCsr("service-1");
+                fty::CsrX509 csr2 = accessor.generateCsr("service-2");
+
+                fty::CsrX509 csrRet1 = accessor.getPendingCsr("service-1");
+                fty::CsrX509 csrRet2 = accessor.getPendingCsr("service-2");
+
+                if((csr1.getPublicKey().getPem() != csrRet1.getPublicKey().getPem()) || (csr2.getPublicKey().getPem() != csrRet2.getPublicKey().getPem()))
+                {
+                    printf (" *<=  Test #%s > Failed\n", testNumber.c_str ());
+                    printf ("Error: %s\n", "CSR PEM does not match the one requested");
+                    testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
+                }
+                else
+                {
+                    printf(" *<=  Test #%s > Ok\n", testNumber.c_str());
+                    testsResults.emplace_back (" Test #"+testNumber+" "+testName,true);
+                }
+            }
+            catch(const std::exception& e)
+            {
+                printf (" *<=  Test #%s > Failed\n", testNumber.c_str ());
+                printf ("Error: %s\n", e.what ());
+                testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
+            }
+        }
+    } // 3.X
+    
+    //test 4.X
     /*
     {
-        //test 3.1 => import certificate
-        testNumber = "3.1";
+        //test 4.1
+        testNumber = "4.1";
         testName = "importCertificate => valid configuration file";
         printf("\n-----------------------------------------------------------------------\n");
         {
@@ -271,7 +386,7 @@ std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClien
                 testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
             }
         }
-    } // 3.X
+    } // 4.X
     */
   
 

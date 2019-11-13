@@ -50,6 +50,8 @@ namespace certgen
             std::string handleGenerateSelfsignedCertificate(const fty::Payload & params);
             std::string handleGenerateCSR(const fty::Payload & params);
             std::string handleImportCertificate(const fty::Payload & params);
+            std::string handleGetPendingCSR(const fty::Payload & params);
+            std::string handleRemovePendingCSR(const fty::Payload & params);
     };
 
 } // namescpace certgen
