@@ -85,7 +85,4 @@ namespace certgen
     };
 } // namescpace certgen
 
-//  Self test of this class
-void certgen_accessor_test (bool verbose);
-
 #endif

@@ -56,4 +56,6 @@ namespace certgen
 } // namescpace certgen
 
 
+void certgen_certificate_generator_server_test (bool verbose);
+
 #endif

@@ -82,16 +82,3 @@ namespace certgen
         return recMessage;    
     }
 } // namescpace certgen
-
-
-//  Self test of this class
-
-#define SELFTEST_DIR_RO "src/selftest-ro"
-#define SELFTEST_DIR_RW "src/selftest-rw"
-
-void certgen_accessor_test (bool verbose)
-{
-    printf (" * certgen_accessor: ");
-
-    printf ("OK\n");
-}

@@ -384,3 +384,16 @@ namespace certgen
 
 } // namescpace certgen
 
+//  --------------------------------------------------------------------------
+//  Self test of this class
+
+#define SELFTEST_DIR_RO "src/selftest-ro"
+#define SELFTEST_DIR_RW "src/selftest-rw"
+
+void
+certgen_certificate_generator_server_test (bool verbose)
+{
+    printf (" * certgen_certificate_generator_server: ");
+
+    printf ("OK\n");
+}

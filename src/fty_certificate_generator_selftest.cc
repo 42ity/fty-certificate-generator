@@ -42,6 +42,7 @@ all_tests [] = {
 #ifdef FTY_CERTIFICATE_GENERATOR_BUILD_DRAFT_API
 // Tests for stable/draft private classes:
 // Now built only with --enable-drafts, so even stable builds are hidden behind the flag
+    { "certgen_certificate_generator_server", NULL, true, false, "certgen_certificate_generator_server_test" },
     { "certgen_certificate_generator_config", NULL, true, false, "certgen_certificate_generator_config_test" },
     { "certgen_certificate_config", NULL, true, false, "certgen_certificate_config_test" },
     { "certgen_key_config", NULL, true, false, "certgen_key_config_test" },
@@ -50,7 +51,6 @@ all_tests [] = {
 #endif // FTY_CERTIFICATE_GENERATOR_BUILD_DRAFT_API
 #ifdef FTY_CERTIFICATE_GENERATOR_BUILD_DRAFT_API
 // Tests for draft public classes:
-    { "certgen_accessor", certgen_accessor_test, false, true, NULL },
     { "fty_certificate_generator_agent", fty_certificate_generator_agent_test, false, true, NULL },
 #endif // FTY_CERTIFICATE_GENERATOR_BUILD_DRAFT_API
     {NULL, NULL, 0, 0, NULL}          //  Sentinel

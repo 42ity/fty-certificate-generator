@@ -270,14 +270,14 @@
     </use>
 
     <!-- Note: Certificate generator class files -->
-    <class name = "certgen_certificate_generator_server" private = "1" selftest = "0"/>
+    <class name = "certgen_certificate_generator_server" private = "1" selftest = "1"/>
 
     <class name = "certgen_certificate_generator_config" private = "1"/>
     <class name = "certgen_certificate_config" private = "1"/>
     <class name = "certgen_key_config" private = "1" />
     <class name = "certgen_storage_config" private = "1"/>
 
-    <class name = "certgen_accessor" selftest = "1"/>
+    <class name = "certgen_accessor" selftest = "0"/>
 
     <class name = "fty-certificate-generator-agent"/>
     <main  name = "fty-certificate-generator" service = "1"/>
