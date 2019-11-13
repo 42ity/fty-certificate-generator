@@ -401,6 +401,9 @@ certgen_certificate_generator_server_test (bool verbose)
 {
     using namespace certgen;
 
+    // env vars
+    setenv("ENV_KNOWNFQDNS", "mauro.roz.lab.etn.com", 1);
+
     std::vector<std::pair<std::string, bool>> testsResults;
 
     std::string testNumber;

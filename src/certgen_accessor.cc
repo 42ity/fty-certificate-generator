@@ -98,27 +98,181 @@ std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClien
 
     //test 1.X
     {
-        //test 1.1 => test retrieve a mapping
+        //test 1.1 => generate self signed certificate
         testNumber = "1.1";
-        testName = "generateSelfCertificateReq";
+        testName = "generateSelfCertificateReq => valid configuration file";
         printf("\n-----------------------------------------------------------------------\n");
         {
             printf(" *=>  Test #%s %s\n", testNumber.c_str(), testName.c_str());
             try
             {
                 CertGenAccessor accessor(syncClient);
-                accessor.generateSelfCertificateReq("test");
+                accessor.generateSelfCertificateReq("service-1");
                 printf(" *<=  Test #%s > Ok\n", testNumber.c_str());
                 testsResults.emplace_back (" Test #"+testNumber+" "+testName,true);
             }
-            catch(const std::runtime_error& e)
+            catch(const std::exception& e)
             {
                 printf (" *<=  Test #%s > Failed\n", testNumber.c_str ());
                 printf ("Error: %s\n", e.what ());
                 testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
             }
         }
+        
+        //test 1.2 => generate self signed certificate (non existing config file)
+        testNumber = "1.2";
+        testName = "generateSelfCertificateReq => invalid configuration file";
+        printf("\n-----------------------------------------------------------------------\n");
+        {
+            printf(" *=>  Test #%s %s\n", testNumber.c_str(), testName.c_str());
+            try
+            {
+                CertGenAccessor accessor(syncClient);
+                accessor.generateSelfCertificateReq("fail");
+                printf(" *<=  Test #%s > Ok\n", testNumber.c_str());
+                testsResults.emplace_back (" Test #"+testNumber+" "+testName,true);
+            }
+            catch(const std::runtime_error& e)
+            {
+                //expected error
+                printf(" *<=  Test #%s > OK\n", testNumber.c_str());
+                testsResults.emplace_back (" Test #"+testNumber+" "+testName,true);
+            }
+            catch(const std::exception& e)
+            {
+                printf(" *<=  Test #%s > Failed\n", testNumber.c_str());
+                printf("Error: %s\n",e.what());
+                testsResults.emplace_back (" Test #"+testNumber+" "+testName,false);
+            }
+        }
     } // 1.X
+    
+    //test 2.X
+    {
+        //test 2.1 => generate self CSR
+        testNumber = "2.1";
+        testName = "generateCsr => success case";
+        printf("\n-----------------------------------------------------------------------\n");
+        {
+            printf(" *=>  Test #%s %s\n", testNumber.c_str(), testName.c_str());
+            try
+            {
+                CertGenAccessor accessor(syncClient);
+                fty::CsrX509 csr = accessor.generateCsr("service-1");
+                printf(" *<=  Test #%s > Ok\n", testNumber.c_str());
+                testsResults.emplace_back (" Test #"+testNumber+" "+testName,true);
+            }
+            catch(const std::exception& e)
+            {
+                printf (" *<=  Test #%s > Failed\n", testNumber.c_str ());
+                printf ("Error: %s\n", e.what ());
+                testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
+            }
+        }
+        
+        //test 2.2 => generate self signed certificate (non existing config file)
+        testNumber = "2.2";
+        testName = "generateCsr => create two requests for the same service";
+        printf("\n-----------------------------------------------------------------------\n");
+        {
+            printf(" *=>  Test #%s %s\n", testNumber.c_str(), testName.c_str());
+            try
+            {
+                CertGenAccessor accessor(syncClient);
+                fty::CsrX509 csr = accessor.generateCsr("service-1");
+
+                fty::CsrX509 newCsr = accessor.generateCsr("service-1");
+                if(newCsr.getPublicKey().getPem() == csr.getPublicKey().getPem())
+                {
+                    printf (" *<=  Test #%s > Failed\n", testNumber.c_str ());
+                    printf ("Error: %s\n", "Both requests have the same publicKey");
+                    testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
+                }
+                else
+                {
+                    printf(" *<=  Test #%s > Ok\n", testNumber.c_str());
+                    testsResults.emplace_back (" Test #"+testNumber+" "+testName,true);
+                }
+            }
+            catch(const std::exception& e)
+            {
+                printf (" *<=  Test #%s > Failed\n", testNumber.c_str ());
+                printf ("Error: %s\n", e.what ());
+                testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
+            }
+        }
+        
+        //test 2.3 => generate self signed certificate (non existing config file)
+        testNumber = "2.3";
+        testName = "generateCsr => create two requests for two different services";
+        printf("\n-----------------------------------------------------------------------\n");
+        {
+            printf(" *=>  Test #%s %s\n", testNumber.c_str(), testName.c_str());
+            try
+            {
+                CertGenAccessor accessor(syncClient);
+                fty::CsrX509 csr1 = accessor.generateCsr("service-1");
+
+                fty::CsrX509 csr2 = accessor.generateCsr("service-2");
+
+                if(csr1.getPublicKey().getPem() == csr2.getPublicKey().getPem())
+                {
+                    printf (" *<=  Test #%s > Failed\n", testNumber.c_str ());
+                    printf ("Error: %s\n", "Both requests have the same publicKey");
+                    testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
+                }
+                else
+                {
+                    printf(" *<=  Test #%s > Ok\n", testNumber.c_str());
+                    testsResults.emplace_back (" Test #"+testNumber+" "+testName,true);
+                }
+            }
+            catch(const std::exception& e)
+            {
+                printf (" *<=  Test #%s > Failed\n", testNumber.c_str ());
+                printf ("Error: %s\n", e.what ());
+                testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
+            }
+        }
+    } // 2.X
+    
+    //test 3.X
+    /*
+    {
+        //test 3.1 => import certificate
+        testNumber = "3.1";
+        testName = "importCertificate => valid configuration file";
+        printf("\n-----------------------------------------------------------------------\n");
+        {
+            printf(" *=>  Test #%s %s\n", testNumber.c_str(), testName.c_str());
+            try
+            {
+                CertGenAccessor accessor(syncClient);
+                fty::CsrX509 csr = accessor.generateCsr("service-1");
+
+                fty::Keys keyPair(csr.getPublicKey().getPem());
+
+                fty::CertificateConfig config;
+
+                // TODO missing implementation in CertificateX509
+
+                fty::CertificateX509 cert = fty::CertificateX509::signCsr(keyPair, config);
+
+                accessor.importCertificate("service-1", cert.getPem());
+
+
+                printf(" *<=  Test #%s > Ok\n", testNumber.c_str());
+                testsResults.emplace_back (" Test #"+testNumber+" "+testName,true);
+            }
+            catch(const std::exception& e)
+            {
+                printf (" *<=  Test #%s > Failed\n", testNumber.c_str ());
+                printf ("Error: %s\n", e.what ());
+                testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
+            }
+        }
+    } // 3.X
+    */
   
 
   return testsResults;
