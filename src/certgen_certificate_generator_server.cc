@@ -47,12 +47,15 @@ namespace certgen
     using namespace fty;
     using namespace std::placeholders;
 
-    CertificateGeneratorServer::CertificateGeneratorServer()
+    CertificateGeneratorServer::CertificateGeneratorServer(const std::string & configPath)
+        : m_configPath(configPath)
     {
         //initiate the commands handlers
         m_supportedCommands[GENERATE_SELFSIGNED_CERTIFICATE] = std::bind(&CertificateGeneratorServer::handleGenerateSelfsignedCertificate, this, _1);
         m_supportedCommands[GENERATE_CSR] = std::bind(&CertificateGeneratorServer::handleGenerateCSR, this, _1);
         m_supportedCommands[IMPORT_CERTIFICATE] = std::bind(&CertificateGeneratorServer::handleImportCertificate, this, _1);
+        m_supportedCommands[GET_PENDING_CSR] = std::bind(&CertificateGeneratorServer::handleGetPendingCSR, this, _1);
+        m_supportedCommands[REMOVE_PENDING_CSR] = std::bind(&CertificateGeneratorServer::handleRemovePendingCSR, this, _1);
     }
 
     Payload CertificateGeneratorServer::handleRequest(const Sender & /*sender*/, const Payload & payload)
@@ -248,9 +251,9 @@ namespace certgen
     }
 
     // read config helper function
-    static CertificateGeneratorConfig getConfig(const std::string & serviceName)
+    static CertificateGeneratorConfig getConfig(const std::string & configPath, const std::string & serviceName)
     {
-        std::string configFilePath(CONFIG_PATH + serviceName + ".cfg");
+        std::string configFilePath(configPath + serviceName + ".cfg");
         std::ifstream configFile (configFilePath);
         if (!configFile)
         {
@@ -305,7 +308,7 @@ namespace certgen
         }
 
         std::string serviceName (params[0]);
-        CertificateGeneratorConfig certgenConfig = getConfig(serviceName);        
+        CertificateGeneratorConfig certgenConfig = getConfig(m_configPath, serviceName);
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
@@ -321,7 +324,7 @@ namespace certgen
         }
 
         std::string serviceName (params[0]);
-        CertificateGeneratorConfig certgenConfig = getConfig(serviceName);        
+        CertificateGeneratorConfig certgenConfig = getConfig(m_configPath, serviceName);
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
@@ -330,11 +333,7 @@ namespace certgen
         fty::CsrX509 csr = CsrX509::generateCsr(keyPair, config);
 
         // replace existing csr for a given service, if any
-        auto searchPendingCsr = m_csrPending.find(serviceName);
-        if (searchPendingCsr != m_csrPending.end())
-        {
-            m_csrPending.erase(serviceName);    // delete old request
-        }
+        m_csrPending.erase(serviceName);    // delete old request
         m_csrPending.insert({serviceName, csr});
 
         return csr.getPem();
@@ -365,13 +364,13 @@ namespace certgen
             throw std::runtime_error ("No pending CSR request for service " + serviceName);
         }
 
-        CertificateGeneratorConfig certgenConfig = getConfig(serviceName);        
+        CertificateGeneratorConfig certgenConfig = getConfig(m_configPath, serviceName);
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
         fty::CertificateX509 tmpCert(certPem);
 
-        if (tmpCert.getPublicKey() != m_csrPending.at(serviceName).getPublicKey())
+        if (tmpCert.getPublicKey() != searchPendingCsr->second.getPublicKey())
         {
             throw std::runtime_error("Imported key does not match the signature of the pending CRS");
         }
@@ -382,5 +381,142 @@ namespace certgen
         return "OK";
     }
 
+    std::string CertificateGeneratorServer::handleGetPendingCSR(const fty::Payload & params)
+    {
+        if (params.empty() || params[0].empty ())
+        {
+            throw std::runtime_error ("Missing service name");
+        }
+       
+        std::string serviceName (params[0]);
+
+        auto searchPendingCsr = m_csrPending.find(serviceName);
+
+        if (searchPendingCsr == m_csrPending.end())
+        {
+            throw std::runtime_error ("No pending CSR request for service " + serviceName);
+        }
+
+        return m_csrPending.at(serviceName).getPem();
+    }
+
+    std::string CertificateGeneratorServer::handleRemovePendingCSR(const fty::Payload & params)
+    {
+        if (params.empty() || params[0].empty ())
+        {
+            throw std::runtime_error ("Missing service name");
+        }
+       
+        std::string serviceName (params[0]);
+
+        m_csrPending.erase(serviceName);
+        
+        return "OK";
+    }
+
 } // namescpace certgen
 
+//  --------------------------------------------------------------------------
+//  Self test of this class
+
+#define SELFTEST_DIR_RO "src/selftest-ro"
+#define SELFTEST_DIR_RW "src/selftest-rw"
+
+// color output definition for test function
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
+
+void
+certgen_certificate_generator_server_test (bool verbose)
+{
+    using namespace certgen;
+
+    // env vars
+    setenv("ENV_KNOWNFQDNS", "mauro.roz.lab.etn.com", 1);
+
+    std::vector<std::pair<std::string, bool>> testsResults;
+
+    std::string testNumber;
+    std::string testName;
+
+    printf (" * certgen_certificate_generator_server: ");
+
+    using Arguments = std::map<std::string, std::string>;
+    
+    printf ("\n ** fty_credential_asset_mapping_mlm_agent: \n");
+    assert (SELFTEST_DIR_RO);
+    assert (SELFTEST_DIR_RW);
+
+    static const char* endpoint = "inproc://certgen-certificate-generator-server";
+
+    zactor_t *broker = zactor_new (mlm_server, (void*) "Malamute");
+    zstr_sendx (broker, "BIND", endpoint, NULL);
+    if (verbose)
+        zstr_send (broker, "VERBOSE");
+    
+    //set configuration parameters
+    Arguments agentParams;
+
+    agentParams["AGENT_NAME"] = "certgen-test-agent";
+    agentParams["CONFIG_PATH"] = SELFTEST_DIR_RO"/cfg/";
+    agentParams["ENDPOINT"] = endpoint;
+
+    //start broker agent
+    zactor_t *server = zactor_new (fty_certificate_generator_agent, static_cast<void*>(&agentParams));
+
+    {
+        //create the 1 Client
+        mlm::MlmSyncClient syncClient("certgen-accessor-test", "certgen-test-agent", 1000, endpoint);
+
+        //Tests from the lib
+        std::vector<std::pair<std::string,bool>> testLibResults = certgen_accessor_test(syncClient);
+
+        printf("\n-----------------------------------------------------------------------\n");
+
+        uint32_t testsPassed = 0;
+        uint32_t testsFailed = 0;
+
+        printf ("\n ** fty_certificate_generator_agent: \n");
+
+        printf("\tTests from the accessor: \n");
+        for(const auto & result : testLibResults)
+        {
+            if(result.second)
+            {
+                printf(ANSI_COLOR_GREEN"\tOK " ANSI_COLOR_RESET "\t%s\n",result.first.c_str());
+                testsPassed++;
+            }
+            else
+            {
+                printf(ANSI_COLOR_RED"\tNOK" ANSI_COLOR_RESET "\t%s\n",result.first.c_str());
+                testsFailed++;
+            }
+        }
+
+        printf("\n-----------------------------------------------------------------------\n");
+
+        if(testsFailed == 0)
+        {
+            printf(ANSI_COLOR_GREEN"\n %i tests passed, everything is ok\n" ANSI_COLOR_RESET "\n",testsPassed);
+
+            /*std::ifstream database(SELFTEST_DIR_RW"/mapping.json", std::ios::binary);
+            std::cerr << database.rdbuf() << std::endl;
+
+            database.close();*/
+        }
+        else
+        {
+            printf(ANSI_COLOR_RED"\n!!!!!!!! %i/%i tests did not pass !!!!!!!! \n" ANSI_COLOR_RESET "\n",testsFailed,(testsPassed+testsFailed));
+            assert(false);
+        }
+
+
+        zstr_sendm (server, "$TERM");
+        sleep(1);
+
+    }
+
+    zactor_destroy (&server);
+    zactor_destroy (&broker);
+}

@@ -43,15 +43,15 @@ namespace certgen
          * @brief send request to generate self certificate
          * @param serviceName name of the service
          */
-        void generateSelfCertificateReq(const std::string & serviceName) const;
+        void generateSelfCertificateReq(const std::string & serviceName);
 
         /**
          * @brief generate certificate signing request (CSR)
          * @param serviceName name of the service
          * 
-         * @return CSR PEM
+         * @return fty::CsrX509 PEM
          */
-        fty::CsrX509 generateCsr(const std::string & serviceName) const;
+        fty::CsrX509 generateCsr(const std::string & serviceName);
 
         /**
          * @brief import certificate
@@ -61,7 +61,23 @@ namespace certgen
         void importCertificate(
             const std::string & serviceName,
             const std::string & cert
-        ) const;
+        );
+
+        /**
+         * @brief get existing certificate signing request (CSR)
+         * @param serviceName name of the service
+         * 
+         * @return fty::CsrX509 object
+         */
+        fty::CsrX509 getPendingCsr(const std::string & serviceName) const;
+
+        /**
+         * @brief remove pending certificate signing request (CSR) for specified service
+         * @param serviceName name of the service
+         * 
+         * @return fty::CsrX509 object
+         */
+        void removePendingCsr(const std::string & serviceName);
 
 
         private:
@@ -85,7 +101,6 @@ namespace certgen
     };
 } // namescpace certgen
 
-//  Self test of this class
-void certgen_accessor_test (bool verbose);
+std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClient & syncClient);
 
 #endif

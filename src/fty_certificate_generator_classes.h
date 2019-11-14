@@ -107,6 +107,11 @@ safe_malloc (size_t size, const char *file, unsigned line)
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
 FTY_CERTIFICATE_GENERATOR_PRIVATE void
+    certgen_certificate_generator_server_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+FTY_CERTIFICATE_GENERATOR_PRIVATE void
     certgen_certificate_generator_config_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
