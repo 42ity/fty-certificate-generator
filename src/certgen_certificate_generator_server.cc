@@ -410,6 +410,8 @@ namespace certgen
         std::string serviceName (params[0]);
 
         m_csrPending.erase(serviceName);
+        
+        return "OK";
     }
 
 } // namescpace certgen
