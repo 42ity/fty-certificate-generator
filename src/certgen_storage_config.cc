@@ -63,6 +63,10 @@ namespace certgen
         {
             return StorageConfigParamsPtr(new StorageConfigSecwParams());
         }
+        if(storageType == "file")
+        {
+            return StorageConfigParamsPtr(new StorageConfigFileParams());
+        }
         else
         {
             throw std::runtime_error( "Storage type <"+storageType+"> is not supported");
@@ -102,6 +106,33 @@ namespace certgen
         return outString;
     }
 
+    void StorageConfigFileParams::load(const cxxtools::SerializationInfo& si)
+    {
+        si.getMember("file_cert_path")   >>= m_fileCertificatePath;
+        si.getMember("file_cert_format") >>= m_fileCertificateFormat;
+        si.getMember("file_key_path")    >>= m_fileKeyPath;
+        si.getMember("file_key_format")  >>= m_fileKeyFormat;
+    }
+
+    std::string StorageConfigFileParams::toString() const
+    {
+        std::string outString("\Certificate");
+        outString += "\n";
+        outString += "\t- File path";
+        outString += m_fileCertificatePath;
+        outString += "\t- File format";
+        outString += m_fileCertificateFormat;
+        outString += "\n";
+        
+        outString += "Key\n";
+        outString += "\t- File path";
+        outString += m_fileKeyPath;
+        outString += "\t- File format";
+        outString += m_fileKeyFormat;
+        
+        return outString;
+    }
+
 } // namescpace certgen
 
 //  --------------------------------------------------------------------------
@@ -135,7 +166,7 @@ void certgen_storage_config_test (bool verbose)
 
     //Next test
     testNumber = "1.1";
-    testName = "Read secw storage configuration-> success case";
+    testName = "Read secw storage configuration";
     printf ("\n----------------------------------------------------------------"
             "-------\n");
     {
@@ -145,7 +176,7 @@ void certgen_storage_config_test (bool verbose)
             //Do the test here. If error throw expections
             using namespace certgen;
 
-            std::string configFilePath(SELFTEST_DIR_RO + std::string("/certgen_storage.cfg"));
+            std::string configFilePath(SELFTEST_DIR_RO + std::string("/certgen_storage_secw.cfg"));
 
             std::ifstream configFile(configFilePath);
 
@@ -172,10 +203,51 @@ void certgen_storage_config_test (bool verbose)
     }
 
     printf ("OK\n");
-    
+
     //Next test
     testNumber = "1.2";
-    testName = "Read secw storage configuration-> error case";
+    testName = "Read file storage configuration";
+    printf ("\n----------------------------------------------------------------"
+            "-------\n");
+    {
+        printf (" *=>  Test #%s %s\n", testNumber.c_str (), testName.c_str ());
+
+        try {
+            //Do the test here. If error throw expections
+            using namespace certgen;
+
+            std::string configFilePath(SELFTEST_DIR_RO + std::string("/certgen_storage_file.cfg"));
+
+            std::ifstream configFile(configFilePath);
+
+            std::stringstream configJson;
+            configJson << configFile.rdbuf();
+            configFile.close();
+
+            cxxtools::SerializationInfo configSi;
+            cxxtools::JsonDeserializer deserializer(configJson);
+            deserializer.deserialize(configSi);
+
+            StorageConfig storageConf;
+
+            configSi >>= storageConf;
+
+            printf (" *<=  Test #%s > OK\n", testNumber.c_str ());
+            testsResults.emplace_back (" Test #" + testNumber + " " + testName, true);
+        }
+        catch(const std::exception& e)
+        {
+            printf(" *<=  Test #%s > Failed\n", testNumber.c_str());
+            printf("Error: %s\n",e.what());
+            testsResults.emplace_back (" Test #"+testNumber+" "+testName,false);
+        }
+    }
+
+    printf ("OK\n");
+
+    //Next test
+    testNumber = "1.3";
+    testName = "Read storage configuration-> error case";
     printf ("\n----------------------------------------------------------------"
             "-------\n");
     {
