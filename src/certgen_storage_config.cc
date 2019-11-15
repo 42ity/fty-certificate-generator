@@ -116,7 +116,7 @@ namespace certgen
 
     std::string StorageConfigFileParams::toString() const
     {
-        std::string outString("\Certificate");
+        std::string outString("Certificate");
         outString += "\n";
         outString += "\t- File path";
         outString += m_fileCertificatePath;

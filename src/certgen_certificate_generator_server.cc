@@ -29,6 +29,7 @@
 #include "fty_certificate_generator_classes.h"
 #include <chrono>
 #include <fstream>
+#include <memory>
 #include <netdb.h>
 
 // because there is NO std::chrono::days in C++14
@@ -295,60 +296,58 @@ namespace certgen
         throw std::runtime_error ("Invalid key type");
     }
 
-    static void storeToSecw (const CertificateX509 & cert, const StorageConfigSecwParams* params)
+    static void storeToSecw (const Keys & keyPair, const CertificateX509 & cert, const StorageConfigSecwParams & params)
     {
         // TODO setup socket sync client
-        fty::SocketSyncClient client;
+        fty::SocketSyncClient client("secw-test.socket");
 
         secw::ProducerAccessor secwAccessor(client);
       
 
-        const std::string & portfolio = params->portfolio();
-        const std::string & documentName = params->documentName();
+        const std::string & portfolio = params.portfolio();
+        const std::string & documentName = params.documentName();
 
         // check if the document already exists
         try
         {   // if already exists, update
-            secw::DocumentPtr docPtr = secwAccessor.SecwNameDoesNotExistException(portfolio, documentName);
+            secw::DocumentPtr docPtr = secwAccessor.getDocumentWithoutPrivateDataByName(portfolio, documentName);
 
             secw::InternalCertificatePtr internalCertDoc = secw::InternalCertificate::tryToCast(docPtr);
 
             if(internalCertDoc == nullptr) throw std::runtime_error("Unable to cast the document");
 
-            // TODO store the private key, not the public one
             internalCertDoc->setPem(cert.getPem());
-            internalCertDoc->setPrivateKeyPem(cert.getPublicKey().getPem());
+            internalCertDoc->setPrivateKeyPem(keyPair.getPem());
 
             // do not update usages
-            secwAccessor.updateDocument(portfolio, std::dynamic_pointer_cast<Document>(internalCertDoc));
+            secwAccessor.updateDocument(portfolio, std::dynamic_pointer_cast<secw::Document>(internalCertDoc));
 
         }
-        catch(const SecwNameDoesNotExistException &) // document does not exist
+        catch(const secw::SecwNameDoesNotExistException &) // document does not exist
         {   // if not, create new document
-            // TODO store the private key, not the public one
-            secw::InternalCertificatePtr certDoc = std::make_shared<InternalCertificate>(documentName, cert.getPem(), cert.getPublicKey().getPem());
+            secw::InternalCertificatePtr certDoc = std::make_shared<secw::InternalCertificate>(documentName, cert.getPem(), keyPair.getPem());
 
-            for(const std::string & s : params->documentUsages())
+            for(const std::string & s : params.documentUsages())
             {
                 certDoc->addUsage(s);
             }
 
-            secwAccessor.insertNewDocument(portfolio, std::dynamic_pointer_cast<Document>(certDoc));
+            secwAccessor.insertNewDocument(portfolio, std::dynamic_pointer_cast<secw::Document>(certDoc));
         }
     }
 
-    static void storeToFile (const CertificateX509 & cert, const StorageConfigFileParams* params)
+    static void storeToFile (const Keys & keyPair, const CertificateX509 & cert, const StorageConfigFileParams & params)
     {
-        const std::string & certFilePath = params->fileCertificatePath();
-        const std::string & keyFilePath = params->fileKeyPath();
+        const std::string & certFilePath = params.fileCertificatePath();
+        const std::string & keyFilePath = params.fileKeyPath();
 
         std::ofstream certFile;
         std::ofstream keyFile;
 
-        certFile.open(certFilePath, ios::out | ios::trunc);
-        keyFile.open(keyFilePath, ios::out | ios::trunc);
+        certFile.open(certFilePath);
+        keyFile.open(keyFilePath);
 
-        if(params->fileCertificateFormat() == "PEM")
+        if(params.fileCertificateFormat() == "PEM")
         {
             certFile << cert.getPem();
         }
@@ -357,10 +356,9 @@ namespace certgen
             throw std::runtime_error("Invalid certificate file format");
         }
         
-        if(params->keyCertificateFormat() == "PEM")
+        if(params.fileKeyFormat() == "PEM")
         {
-            // TODO store private key
-            keyFile << cert.getPublicKey().getPem();
+            keyFile << keyPair.getPem();
         }
         else
         {
@@ -371,17 +369,17 @@ namespace certgen
         keyFile.close();
     }
 
-    static void store (const CertificateX509 & cert, const StorageConfig & conf)
+    static void store (const Keys & keyPair, const CertificateX509 & cert, const StorageConfig & conf)
     {
         if(conf.storageType() == "secw")
         {
-            StorageConfigSecwParams *secwParams = dynamic_cast<StorageConfigSecwParams*>(conf.params().get())
-            storeToSecw(cert, secwParams);
+            const StorageConfigSecwParams *secwParams = dynamic_cast<StorageConfigSecwParams*>(conf.params().get());
+            storeToSecw(keyPair, cert, *secwParams);
         }
-        elsif(conf.storageType() == "file")
+        else if(conf.storageType() == "file")
         {
-            StorageConfigFileParams *fileParams = dynamic_cast<StorageConfigFileParams*>(conf.params().get())
-            storeToFile(cert, fileParams);
+            const StorageConfigFileParams *fileParams = dynamic_cast<StorageConfigFileParams*>(conf.params().get());
+            storeToFile(keyPair, cert, *fileParams);
         }
         else
         {
@@ -402,7 +400,9 @@ namespace certgen
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
-        store (CertificateX509::selfSignSha256(generateKeys(certgenConfig.keyConf()), config), certgenConfig.storageConf());
+        fty::Keys keyPair = generateKeys(certgenConfig.keyConf());
+
+        store (keyPair, CertificateX509::selfSignSha256(keyPair, config), certgenConfig.storageConf());
         return "OK";
     }
 
@@ -424,7 +424,7 @@ namespace certgen
 
         // replace existing csr for a given service, if any
         m_csrPending.erase(serviceName);    // delete old request
-        m_csrPending.insert({serviceName, csr});
+        m_csrPending.insert({serviceName, std::make_pair(keyPair, csr)});
 
         return csr.getPem();
     }
@@ -458,16 +458,16 @@ namespace certgen
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
-        fty::CertificateX509 tmpCert(certPem);
+        fty::CertificateX509 importedCert(certPem);
 
-        if (tmpCert.getPublicKey() != searchPendingCsr->second.getPublicKey())
+        if (importedCert.getPublicKey() != searchPendingCsr->second.second.getPublicKey())
         {
             throw std::runtime_error("Imported key does not match the signature of the pending CRS");
         }
         
         m_csrPending.erase(serviceName);
 
-        store (tmpCert, certgenConfig.storageConf());
+        store (searchPendingCsr->second.first, importedCert, certgenConfig.storageConf());
         return "OK";
     }
 
@@ -487,7 +487,7 @@ namespace certgen
             throw std::runtime_error ("No pending CSR request for service " + serviceName);
         }
 
-        return m_csrPending.at(serviceName).getPem();
+        return m_csrPending.at(serviceName).second.getPem();
     }
 
     std::string CertificateGeneratorServer::handleRemovePendingCSR(const fty::Payload & params)
