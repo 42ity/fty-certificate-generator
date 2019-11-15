@@ -28,6 +28,7 @@
 
 #include "fty_certificate_generator_classes.h"
 #include <chrono>
+#include <fstream>
 #include <netdb.h>
 
 // because there is NO std::chrono::days in C++14
@@ -294,9 +295,98 @@ namespace certgen
         throw std::runtime_error ("Invalid key type");
     }
 
-    // TODO: ask security wallet to store the certificate
+    static void storeToSecw (const CertificateX509 & cert, const StorageConfigSecwParams* params)
+    {
+        // TODO setup socket sync client
+        fty::SocketSyncClient client;
+
+        secw::ProducerAccessor secwAccessor(client);
+      
+
+        const std::string & portfolio = params->portfolio();
+        const std::string & documentName = params->documentName();
+
+        // check if the document already exists
+        try
+        {   // if already exists, update
+            secw::DocumentPtr docPtr = secwAccessor.SecwNameDoesNotExistException(portfolio, documentName);
+
+            secw::InternalCertificatePtr internalCertDoc = secw::InternalCertificate::tryToCast(docPtr);
+
+            if(internalCertDoc == nullptr) throw std::runtime_error("Unable to cast the document");
+
+            // TODO store the private key, not the public one
+            internalCertDoc->setPem(cert.getPem());
+            internalCertDoc->setPrivateKeyPem(cert.getPublicKey().getPem());
+
+            // do not update usages
+            secwAccessor.updateDocument(portfolio, std::dynamic_pointer_cast<Document>(internalCertDoc));
+
+        }
+        catch(const SecwNameDoesNotExistException &) // document does not exist
+        {   // if not, create new document
+            // TODO store the private key, not the public one
+            secw::InternalCertificatePtr certDoc = std::make_shared<InternalCertificate>(documentName, cert.getPem(), cert.getPublicKey().getPem());
+
+            for(const std::string & s : params->documentUsages())
+            {
+                certDoc->addUsage(s);
+            }
+
+            secwAccessor.insertNewDocument(portfolio, std::dynamic_pointer_cast<Document>(certDoc));
+        }
+    }
+
+    static void storeToFile (const CertificateX509 & cert, const StorageConfigFileParams* params)
+    {
+        const std::string & certFilePath = params->fileCertificatePath();
+        const std::string & keyFilePath = params->fileKeyPath();
+
+        std::ofstream certFile;
+        std::ofstream keyFile;
+
+        certFile.open(certFilePath, ios::out | ios::trunc);
+        keyFile.open(keyFilePath, ios::out | ios::trunc);
+
+        if(params->fileCertificateFormat() == "PEM")
+        {
+            certFile << cert.getPem();
+        }
+        else
+        {
+            throw std::runtime_error("Invalid certificate file format");
+        }
+        
+        if(params->keyCertificateFormat() == "PEM")
+        {
+            // TODO store private key
+            keyFile << cert.getPublicKey().getPem();
+        }
+        else
+        {
+            throw std::runtime_error("Invalid key file format");
+        }
+
+        certFile.close();
+        keyFile.close();
+    }
+
     static void store (const CertificateX509 & cert, const StorageConfig & conf)
     {
+        if(conf.storageType() == "secw")
+        {
+            StorageConfigSecwParams *secwParams = dynamic_cast<StorageConfigSecwParams*>(conf.params().get())
+            storeToSecw(cert, secwParams);
+        }
+        elsif(conf.storageType() == "file")
+        {
+            StorageConfigFileParams *fileParams = dynamic_cast<StorageConfigFileParams*>(conf.params().get())
+            storeToFile(cert, fileParams);
+        }
+        else
+        {
+            throw std::runtime_error ("Invalid storage type");
+        }
     }
 
 
