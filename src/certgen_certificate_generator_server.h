@@ -43,8 +43,7 @@ namespace certgen
             std::string m_configPath;
             
             std::map<Command, FctCommandHandler> m_supportedCommands;
-            std::map<std::string, fty::CsrX509> m_csrPending; // needed to import an existing certificate correctly 
-
+            std::map<std::string, std::pair<fty::Keys, fty::CsrX509>> m_csrPending; // needed to import an existing certificate correctly 
 
             // Handlers for all supported commands
             std::string handleGenerateSelfsignedCertificate(const fty::Payload & params);

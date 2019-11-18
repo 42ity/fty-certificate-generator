@@ -83,6 +83,25 @@ namespace certgen
         const std::vector<std::string> & documentUsages() const { return m_documentUsages; }
     };
 
+    class StorageConfigFileParams : public StorageConfigParams
+    {
+    private:
+        std::string m_fileCertificatePath;
+        std::string m_fileCertificateFormat;
+        std::string m_fileKeyPath;
+        std::string m_fileKeyFormat;
+    public:
+
+        void load(const cxxtools::SerializationInfo& si) override;
+
+        std::string toString() const override;
+
+        const std::string & fileCertificatePath()   const { return m_fileCertificatePath; }
+        const std::string & fileCertificateFormat() const { return m_fileCertificateFormat; }
+        const std::string & fileKeyPath()           const { return m_fileKeyPath; }
+        const std::string & fileKeyFormat()         const { return m_fileKeyFormat; }
+    };
+
 } //namespace certgen
 
 void certgen_storage_config_test (bool verbose);
