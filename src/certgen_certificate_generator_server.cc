@@ -434,13 +434,12 @@ namespace certgen
         {
             while ((ent = readdir(dir)) != NULL)
             {
-                std::string fileName(ent->d_name);
-                // TODO check if all cases are covered
-                std::string serviceName = fileName.substr(fileName.find_last_of("/") + 1, fileName.find_last_of(".") - fileName.find_last_of("/") - 1);
-                std::string fileExtension = fileName.substr(fileName.find_last_of(".") + 1);
+                std::string filePath(ent->d_name);
+                std::string fileName = filePath.substr(filePath.find_last_of("/") + 1);
 
-                if(fileExtension == serviceFileExtension)
+                if((fileName.substr(fileName.find_last_of(".") + 1)) == serviceFileExtension)
                 {
+                    std::string serviceName = fileName.substr(0, fileName.find_last_of("."));
                     serviceList.push_back(serviceName);
                 }
             }
