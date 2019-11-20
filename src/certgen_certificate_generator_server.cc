@@ -319,16 +319,17 @@ namespace certgen
     static void storeToSecw (const Keys & keyPair, const CertificateX509 & cert, const StorageConfigSecwParams & params)
     {
         // TODO setup socket sync client
+        bool certPresent = isCertPresentSecw(params);
+
         fty::SocketSyncClient client("secw-test.socket");
 
         secw::ProducerAccessor secwAccessor(client);
-      
 
         const std::string & portfolio = params.portfolio();
         const std::string & documentName = params.documentName();
 
         // check if the document already exists
-        try
+        if(certPresent)
         {   // if already exists, update
             secw::DocumentPtr docPtr = secwAccessor.getDocumentWithoutPrivateDataByName(portfolio, documentName);
 
@@ -341,9 +342,8 @@ namespace certgen
 
             // do not update usages
             secwAccessor.updateDocument(portfolio, std::dynamic_pointer_cast<secw::Document>(internalCertDoc));
-
         }
-        catch(const secw::SecwNameDoesNotExistException &) // document does not exist
+        else
         {   // if not, create new document
             secw::InternalCertificatePtr certDoc = std::make_shared<secw::InternalCertificate>(documentName, cert.getPem(), keyPair.getPem());
 
@@ -461,7 +461,6 @@ namespace certgen
         return serviceList;
     }
 
-    // if true, a new certificate for the service must be generated
     static bool isCertPresentSecw(const StorageConfigSecwParams & params)
     {
         fty::SocketSyncClient client("secw-test.socket");
@@ -500,22 +499,27 @@ namespace certgen
         return certExists;
     }
 
+    // if true, a new certificate for the service must be generated
     static bool isCertPresent(const StorageConfig & conf)
     {
+        bool retValue = false;
+
         if(conf.storageType() == "secw")
         {
             const StorageConfigSecwParams *secwParams = dynamic_cast<StorageConfigSecwParams*>(conf.params().get());
-            isCertPresentSecw(*secwParams); 
+            retValue = isCertPresentSecw(*secwParams); 
         }
         else if(conf.storageType() == "file")
         {
             const StorageConfigFileParams *fileParams = dynamic_cast<StorageConfigFileParams*>(conf.params().get());
-            isCertPresentFile(*fileParams);
+            retValue = isCertPresentFile(*fileParams);
         }
         else
         {
             throw std::runtime_error ("Invalid storage type");
         }
+
+        return retValue;
     }
 
     static bool needCertGen(const StorageConfig & conf)
