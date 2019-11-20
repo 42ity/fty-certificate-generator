@@ -60,8 +60,11 @@ namespace certgen
     static void storeToSecw (const Keys & keyPair, const CertificateX509 & cert, const StorageConfigSecwParams & params);
     static void storeToFile (const Keys & keyPair, const CertificateX509 & cert, const StorageConfigFileParams & params);
     static void store (const Keys & keyPair, const CertificateX509 & cert, const StorageConfig & conf);
-    static void initCert(const std::string & configFolder);
     static std::vector<std::string> getAllServices(const std::string & folderPath, const std::string & serviceFileExtension);
+    static void initCert(const std::string & configFolder);
+    static bool isCertPresentSecw(const StorageConfigSecwParams & conf);
+    static bool isCertPresentFile(const StorageConfigFileParams & conf);
+    static bool isCertPresent(const StorageConfig & conf);
     static bool needCertGen(const StorageConfig & conf);
 
     CertificateGeneratorServer::CertificateGeneratorServer(const std::string & configPath)
@@ -459,45 +462,55 @@ namespace certgen
     }
 
     // if true, a new certificate for the service must be generated
-    static bool needCertGen(const StorageConfig & conf)
+    static bool isCertPresentSecw(const StorageConfigSecwParams & params)
+    {
+        fty::SocketSyncClient client("secw-test.socket");
+
+        secw::ProducerAccessor secwAccessor(client);
+    
+        const std::string & portfolio = params.portfolio();
+        const std::string & documentName = params.documentName();
+
+        // check if the document already exists
+        try
+        {   // if already exists, return false
+            secw::DocumentPtr docPtr = secwAccessor.getDocumentWithoutPrivateDataByName(portfolio, documentName);
+
+            return true;
+        }
+        catch(const secw::SecwNameDoesNotExistException &) // document does not exist
+        {   // if does not exist, create new document only if permanent storage is required
+            return false;
+        }
+    }
+
+    static bool isCertPresentFile(const StorageConfigFileParams & params)
+    {
+        const std::string & certFilePath = params.fileCertificatePath();
+        const std::string & keyFilePath  = params.fileKeyPath();
+
+        std::ifstream certFile(certFilePath);
+        std::ifstream keyFile(keyFilePath);
+
+        bool certExists = certFile.good() && keyFile.good();
+
+        certFile.close();
+        keyFile.close();
+
+        return certExists;
+    }
+
+    static bool isCertPresent(const StorageConfig & conf)
     {
         if(conf.storageType() == "secw")
         {
-            const StorageConfigSecwParams *params = dynamic_cast<StorageConfigSecwParams*>(conf.params().get());
-
-            fty::SocketSyncClient client("secw-test.socket");
-
-            secw::ProducerAccessor secwAccessor(client);
-        
-            const std::string & portfolio = params->portfolio();
-            const std::string & documentName = params->documentName();
-
-            // check if the document already exists
-            try
-            {   // if already exists, return false
-                secw::DocumentPtr docPtr = secwAccessor.getDocumentWithoutPrivateDataByName(portfolio, documentName);
-
-                return false;
-            }
-            catch(const secw::SecwNameDoesNotExistException &) // document does not exist
-            {   // if does not exist, create new document only if permanent storage is required
-                return conf.isPermanent();
-            }
+            const StorageConfigSecwParams *secwParams = dynamic_cast<StorageConfigSecwParams*>(conf.params().get());
+            isCertPresentSecw(*secwParams); 
         }
         else if(conf.storageType() == "file")
         {
-            const StorageConfigFileParams *params = dynamic_cast<StorageConfigFileParams*>(conf.params().get());
-            
-            const std::string & certFilePath = params->fileCertificatePath();
-            // const std::string & keyFilePath = params->fileKeyPath();
-
-            std::ifstream certFile(certFilePath);
-
-            bool fileExists = certFile.good();
-
-            certFile.close();
-
-            return (conf.isPermanent() && !fileExists);
+            const StorageConfigFileParams *fileParams = dynamic_cast<StorageConfigFileParams*>(conf.params().get());
+            isCertPresentFile(*fileParams);
         }
         else
         {
@@ -505,6 +518,10 @@ namespace certgen
         }
     }
 
+    static bool needCertGen(const StorageConfig & conf)
+    {
+        return (conf.isPermanent() && ! isCertPresent(conf));
+    }
 
     std::string CertificateGeneratorServer::handleGenerateSelfsignedCertificate(const fty::Payload & params)
     {
