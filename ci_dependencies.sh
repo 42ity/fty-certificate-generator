@@ -27,14 +27,16 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list log4cplus-dev >
     echo ""
     BASE_PWD=${PWD}
     echo "`date`: INFO: Building prerequisite 'log4cplus' from Git repository..." >&2
+    echo "git clone -b 1.1.2-FTY-master https://github.com/42ity/log4cplus.git log4cplus"
     $CI_TIME git clone --quiet --depth 1 -b 1.1.2-FTY-master https://github.com/42ity/log4cplus.git log4cplus
     cd ./log4cplus
     CCACHE_BASEDIR=${PWD}
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'log4cplus' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
-        ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
+        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        echo "`date`: INFO: Building prerequisites of 'log4cplus' using ci_dependencies.sh $PROPAGATED_BRANCH..." >&2
+        ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
         $CI_TIME ./autogen.sh 2> /dev/null
@@ -64,14 +66,16 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common_l
     echo ""
     BASE_PWD=${PWD}
     echo "`date`: INFO: Building prerequisite 'fty-common-logging' from Git repository..." >&2
+    echo "git clone -b master https://github.com/42ity/fty-common-logging.git fty-common-logging"
     $CI_TIME git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-logging.git fty-common-logging
     cd ./fty-common-logging
     CCACHE_BASEDIR=${PWD}
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'fty-common-logging' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
-        ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
+        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        echo "`date`: INFO: Building prerequisites of 'fty-common-logging' using ci_dependencies.sh $PROPAGATED_BRANCH..." >&2
+        ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
         $CI_TIME ./autogen.sh 2> /dev/null
@@ -101,14 +105,16 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list cxxtools-dev >/
     echo ""
     BASE_PWD=${PWD}
     echo "`date`: INFO: Building prerequisite 'cxxtools' from Git repository..." >&2
+    echo "git clone -b 2.2-FTY-master https://github.com/42ity/cxxtools.git cxxtools"
     $CI_TIME git clone --quiet --depth 1 -b 2.2-FTY-master https://github.com/42ity/cxxtools.git cxxtools
     cd ./cxxtools
     CCACHE_BASEDIR=${PWD}
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'cxxtools' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
-        ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
+        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        echo "`date`: INFO: Building prerequisites of 'cxxtools' using ci_dependencies.sh $PROPAGATED_BRANCH..." >&2
+        ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
         $CI_TIME ./autogen.sh 2> /dev/null
@@ -138,14 +144,16 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common-d
     echo ""
     BASE_PWD=${PWD}
     echo "`date`: INFO: Building prerequisite 'fty-common' from Git repository..." >&2
+    echo "git clone -b master https://github.com/42ity/fty-common.git fty-common"
     $CI_TIME git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common.git fty-common
     cd ./fty-common
     CCACHE_BASEDIR=${PWD}
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'fty-common' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
-        ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
+        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        echo "`date`: INFO: Building prerequisites of 'fty-common' using ci_dependencies.sh $PROPAGATED_BRANCH..." >&2
+        ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
         $CI_TIME ./autogen.sh 2> /dev/null
@@ -186,14 +194,16 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_lib_cert
     echo ""
     BASE_PWD=${PWD}
     echo "`date`: INFO: Building prerequisite 'fty-lib-certificate' from Git repository..." >&2
+    echo "git clone -b master https://github.com/42ity/fty-lib-certificate.git fty-lib-certificate"
     $CI_TIME git clone --quiet --depth 1 -b master https://github.com/42ity/fty-lib-certificate.git fty-lib-certificate
     cd ./fty-lib-certificate
     CCACHE_BASEDIR=${PWD}
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'fty-lib-certificate' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
-        ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
+        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        echo "`date`: INFO: Building prerequisites of 'fty-lib-certificate' using ci_dependencies.sh $PROPAGATED_BRANCH..." >&2
+        ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
         $CI_TIME ./autogen.sh 2> /dev/null
@@ -223,14 +233,16 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libsodium-dev >
     echo ""
     BASE_PWD=${PWD}
     echo "`date`: INFO: Building prerequisite 'libsodium' from Git repository..." >&2
+    echo "git clone -b 1.0.5-FTY-master https://github.com/42ity/libsodium.git libsodium"
     $CI_TIME git clone --quiet --depth 1 -b 1.0.5-FTY-master https://github.com/42ity/libsodium.git libsodium
     cd ./libsodium
     CCACHE_BASEDIR=${PWD}
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'libsodium' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
-        ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
+        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        echo "`date`: INFO: Building prerequisites of 'libsodium' using ci_dependencies.sh $PROPAGATED_BRANCH..." >&2
+        ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
         $CI_TIME ./autogen.sh 2> /dev/null
@@ -260,14 +272,16 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libzmq3-dev >/d
     echo ""
     BASE_PWD=${PWD}
     echo "`date`: INFO: Building prerequisite 'libzmq' from Git repository..." >&2
+    echo "git clone -b 4.2.0-FTY-master https://github.com/42ity/libzmq.git libzmq"
     $CI_TIME git clone --quiet --depth 1 -b 4.2.0-FTY-master https://github.com/42ity/libzmq.git libzmq
     cd ./libzmq
     CCACHE_BASEDIR=${PWD}
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'libzmq' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
-        ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
+        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        echo "`date`: INFO: Building prerequisites of 'libzmq' using ci_dependencies.sh $PROPAGATED_BRANCH..." >&2
+        ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
         $CI_TIME ./autogen.sh 2> /dev/null
@@ -297,14 +311,16 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libczmq-dev >/d
     echo ""
     BASE_PWD=${PWD}
     echo "`date`: INFO: Building prerequisite 'czmq' from Git repository..." >&2
+    echo "git clone -b v3.0.2-FTY-master https://github.com/42ity/czmq.git czmq"
     $CI_TIME git clone --quiet --depth 1 -b v3.0.2-FTY-master https://github.com/42ity/czmq.git czmq
     cd ./czmq
     CCACHE_BASEDIR=${PWD}
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'czmq' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
-        ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
+        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        echo "`date`: INFO: Building prerequisites of 'czmq' using ci_dependencies.sh $PROPAGATED_BRANCH..." >&2
+        ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
         $CI_TIME ./autogen.sh 2> /dev/null
@@ -334,14 +350,16 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libmlm-dev >/de
     echo ""
     BASE_PWD=${PWD}
     echo "`date`: INFO: Building prerequisite 'malamute' from Git repository..." >&2
+    echo "git clone -b 1.0-FTY-master https://github.com/42ity/malamute.git malamute"
     $CI_TIME git clone --quiet --depth 1 -b 1.0-FTY-master https://github.com/42ity/malamute.git malamute
     cd ./malamute
     CCACHE_BASEDIR=${PWD}
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'malamute' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
-        ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
+        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        echo "`date`: INFO: Building prerequisites of 'malamute' using ci_dependencies.sh $PROPAGATED_BRANCH..." >&2
+        ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
         $CI_TIME ./autogen.sh 2> /dev/null
@@ -371,14 +389,16 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common_m
     echo ""
     BASE_PWD=${PWD}
     echo "`date`: INFO: Building prerequisite 'fty-common-mlm' from Git repository..." >&2
+    echo "git clone -b master https://github.com/42ity/fty-common-mlm.git fty-common-mlm"
     $CI_TIME git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-mlm.git fty-common-mlm
     cd ./fty-common-mlm
     CCACHE_BASEDIR=${PWD}
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'fty-common-mlm' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
-        ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
+        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        echo "`date`: INFO: Building prerequisites of 'fty-common-mlm' using ci_dependencies.sh $PROPAGATED_BRANCH..." >&2
+        ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
         $CI_TIME ./autogen.sh 2> /dev/null
@@ -409,11 +429,15 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_security
     BASE_PWD=${PWD}
     echo "`date`: INFO: Building prerequisite 'fty-security-wallet' from Git repository..." >&2
     if [ "x$REQUESTED_BRANCH" = "x" ]; then
+        echo "git clone -b https://github.com/42ity/fty-security-wallet.git fty-security-wallet"
         $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/fty-security-wallet.git fty-security-wallet
     else
         if git ls-remote --heads https://github.com/42ity/fty-security-wallet.git | grep -q "$REQUESTED_BRANCH"; then
+            echo "git clone -b "$REQUESTED_BRANCH" https://github.com/42ity/fty-security-wallet.git fty-security-wallet"
             $CI_TIME git clone --quiet --depth 1 -b "$REQUESTED_BRANCH" https://github.com/42ity/fty-security-wallet.git fty-security-wallet
         else
+            echo "$REQUESTED_BRANCH not found for https://github.com/42ity/fty-security-wallet.git"
+            echo "git clone -b https://github.com/42ity/fty-security-wallet.git fty-security-wallet"
             $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/fty-security-wallet.git fty-security-wallet
         fi
     fi
@@ -422,8 +446,9 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_security
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'fty-security-wallet' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
-        ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
+        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        echo "`date`: INFO: Building prerequisites of 'fty-security-wallet' using ci_dependencies.sh $PROPAGATED_BRANCH..." >&2
+        ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
         $CI_TIME ./autogen.sh 2> /dev/null
