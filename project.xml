@@ -174,7 +174,7 @@
 
     <!-- Security wallet -->
     <use project = "fty-security-wallet" libname = "libfty_security_wallet" header = "fty_security_wallet.h"
-        repository = "https://github.com/42ity/fty-security-wallet.git"
+        repository = "https://github.com/perrettecl/fty-security-wallet.git"
         test = "fty_security_wallet_selftest" >
     </use>
 
