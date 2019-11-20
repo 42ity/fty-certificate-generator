@@ -33,7 +33,7 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list log4cplus-dev >
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'log4cplus'..." >&2
+        echo "`date`: INFO: Building prerequisites of 'log4cplus' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
         ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
@@ -70,7 +70,7 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common_l
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'fty-common-logging'..." >&2
+        echo "`date`: INFO: Building prerequisites of 'fty-common-logging' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
         ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
@@ -107,7 +107,7 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list cxxtools-dev >/
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'cxxtools'..." >&2
+        echo "`date`: INFO: Building prerequisites of 'cxxtools' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
         ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
@@ -144,7 +144,7 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common-d
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'fty-common'..." >&2
+        echo "`date`: INFO: Building prerequisites of 'fty-common' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
         ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
@@ -192,7 +192,7 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_lib_cert
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'fty-lib-certificate'..." >&2
+        echo "`date`: INFO: Building prerequisites of 'fty-lib-certificate' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
         ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
@@ -229,7 +229,7 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libsodium-dev >
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'libsodium'..." >&2
+        echo "`date`: INFO: Building prerequisites of 'libsodium' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
         ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
@@ -266,7 +266,7 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libzmq3-dev >/d
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'libzmq'..." >&2
+        echo "`date`: INFO: Building prerequisites of 'libzmq' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
         ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
@@ -303,7 +303,7 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libczmq-dev >/d
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'czmq'..." >&2
+        echo "`date`: INFO: Building prerequisites of 'czmq' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
         ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
@@ -340,7 +340,7 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libmlm-dev >/de
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'malamute'..." >&2
+        echo "`date`: INFO: Building prerequisites of 'malamute' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
         ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
@@ -377,7 +377,7 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common_m
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'fty-common-mlm'..." >&2
+        echo "`date`: INFO: Building prerequisites of 'fty-common-mlm' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
         ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
@@ -422,7 +422,7 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_security
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        echo "`date`: INFO: Building prerequisites of 'fty-security-wallet'..." >&2
+        echo "`date`: INFO: Building prerequisites of 'fty-security-wallet' using ci_dependencies.sh $REQUESTED_BRANCH..." >&2
         ($CI_TIME source ./ci_dependencies.sh $REQUESTED_BRANCH)
     fi
     if [ -e autogen.sh ]; then
