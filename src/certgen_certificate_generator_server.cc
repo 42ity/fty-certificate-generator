@@ -364,6 +364,11 @@ namespace certgen
         certFile.open(certFilePath);
         keyFile.open(keyFilePath);
 
+        if(!certFile.good() || !keyFile.good())
+        {
+            throw std::runtime_error("Invalid certificate file path");
+        }
+
         if(params.fileCertificateFormat() == "PEM")
         {
             certFile << cert.getPem();
