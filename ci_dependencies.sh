@@ -17,7 +17,7 @@ cd "$DEPENDENCIES_DIR"
 
 # Clone and build dependencies, if not yet installed to Travis env as DEBs
 # or MacOS packages; other OSes are not currently supported by Travis cloud
-[ -z "$CI_TIME" ] || echo "`date`: Starting build of dependencies (if any) using ci_dependencies.sh $REQUESTED_BRANCH..."
+echo "`date`: Starting build of dependencies (if any) using ci_dependencies.sh $REQUESTED_BRANCH..."
 
 # Start of recipe for dependency: log4cplus
 if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list log4cplus-dev >/dev/null 2>&1) || \
