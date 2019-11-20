@@ -69,7 +69,6 @@ pkg_deps_prereqs_source: &pkg_deps_prereqs_source
     - libczmq-dev
     - libmlm-dev
     - libfty-common-mlm-dev
-    - libfty-common-socket-dev
     - libfty-security-wallet-dev
 
 # NOTE: Our forks are checked out and built without pkg dependencies in use

@@ -66,7 +66,6 @@ BuildRequires:  zeromq-devel
 BuildRequires:  czmq-devel >= 3.0.2
 BuildRequires:  malamute-devel >= 1.0.0
 BuildRequires:  fty-common-mlm-devel
-BuildRequires:  fty-common-socket-devel
 BuildRequires:  fty-security-wallet-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
@@ -102,7 +101,6 @@ Requires:       zeromq-devel
 Requires:       czmq-devel >= 3.0.2
 Requires:       malamute-devel >= 1.0.0
 Requires:       fty-common-mlm-devel
-Requires:       fty-common-socket-devel
 Requires:       fty-security-wallet-devel
 
 %description devel
