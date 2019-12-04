@@ -1,0 +1,6 @@
+   fty-certificate-generator -> fty-common-logging;
+   fty-certificate-generator -> cxxtools;
+   fty-certificate-generator -> fty-common;
+   fty-certificate-generator -> fty-lib-certificate;
+   fty-certificate-generator -> fty-common-mlm;
+   fty-certificate-generator -> fty-security-wallet;

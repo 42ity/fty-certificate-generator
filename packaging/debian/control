@@ -24,18 +24,11 @@ Maintainer:     fty-certificate-generator Developers <eatonipcopensource@eaton.c
 Standards-Version: 4.0.1.0
 Build-Depends: debhelper (>= 9),
     pkg-config,
-    liblog4cplus-dev,
     libfty-common-logging-dev,
     libcxxtools-dev,
     libfty-common-dev,
-    libssl-dev,
     libfty-lib-certificate-dev,
-    libsodium-dev,
-    libzmq3-dev,
-    libczmq-dev (>= 3.0.2),
-    libmlm-dev (>= 1.0.0),
     libfty-common-mlm-dev,
-    libfty-common-socket-dev,
     libfty-security-wallet-dev,
     gcc (>= 4.9.0), g++ (>= 4.9.0),
     systemd,
@@ -55,18 +48,11 @@ Architecture: any
 Section: libdevel
 Depends:
     ${misc:Depends},
-    liblog4cplus-dev,
     libfty-common-logging-dev,
     libcxxtools-dev,
     libfty-common-dev,
-    libssl-dev,
     libfty-lib-certificate-dev,
-    libsodium-dev,
-    libzmq3-dev,
-    libczmq-dev (>= 3.0.2),
-    libmlm-dev (>= 1.0.0),
     libfty-common-mlm-dev,
-    libfty-common-socket-dev,
     libfty-security-wallet-dev,
     libfty-certificate-generator1 (= ${binary:Version})
 Description: fty-certificate-generator development tools
