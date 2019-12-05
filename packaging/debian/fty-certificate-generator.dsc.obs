@@ -6,6 +6,9 @@ Maintainer: fty-certificate-generator Developers <eatonipcopensource@eaton.com>
 Architecture: any
 Build-Depends: debhelper (>= 9),
     pkg-config,
+    libsodium-dev,
+    libzmq3-dev,
+    libczmq-dev (>= 3.0.2),
     libfty-common-logging-dev,
     libcxxtools-dev,
     libfty-common-dev,

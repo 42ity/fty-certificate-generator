@@ -1,3 +1,6 @@
+   fty-certificate-generator -> libsodium;
+   fty-certificate-generator -> libzmq;
+   fty-certificate-generator -> czmq;
    fty-certificate-generator -> fty-common-logging;
    fty-certificate-generator -> cxxtools;
    fty-certificate-generator -> fty-common;

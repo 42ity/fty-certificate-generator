@@ -12,6 +12,9 @@ AM_CXXFLAGS = \
     -std=c++11
 
 AM_CPPFLAGS = \
+    ${libsodium_CFLAGS} \
+    ${libzmq_CFLAGS} \
+    ${czmq_CFLAGS} \
     ${fty_common_logging_CFLAGS} \
     ${cxxtools_CFLAGS} \
     ${fty_common_CFLAGS} \
@@ -21,7 +24,7 @@ AM_CPPFLAGS = \
     -D__STDC_FORMAT_MACROS \
     -I$(srcdir)/include
 
-project_libs = ${fty_common_logging_LIBS} ${cxxtools_LIBS} ${fty_common_LIBS} ${fty_lib_certificate_LIBS} ${fty_common_mlm_LIBS} ${fty_security_wallet_LIBS}
+project_libs = ${libsodium_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${fty_common_logging_LIBS} ${cxxtools_LIBS} ${fty_common_LIBS} ${fty_lib_certificate_LIBS} ${fty_common_mlm_LIBS} ${fty_security_wallet_LIBS}
 
 SUBDIRS = doc
 SUBDIRS += include
@@ -42,6 +45,9 @@ DISTCLEANFILES =
 
 if ENABLE_DIST_CMAKEFILES
 EXTRA_DIST += \
+    Findlibsodium.cmake \
+    Findlibzmq.cmake \
+    Findczmq.cmake \
     Findfty_common_logging.cmake \
     Findcxxtools.cmake \
     Findfty_common.cmake \

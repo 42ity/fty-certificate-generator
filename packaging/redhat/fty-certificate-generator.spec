@@ -55,6 +55,9 @@ BuildRequires:  xmlto
 # "4.9 or newer".
 BuildRequires:  devtoolset-3-gcc devtoolset-3-gcc-c++
 BuildRequires:  gcc-c++ >= 4.9.0
+BuildRequires:  libsodium-devel
+BuildRequires:  zeromq-devel
+BuildRequires:  czmq-devel >= 3.0.2
 BuildRequires:  fty-common-logging-devel
 BuildRequires:  cxxtools-devel
 BuildRequires:  fty-common-devel
@@ -84,6 +87,9 @@ This package contains shared library for fty-certificate-generator: generation i
 Summary:        generation internal certificates agent
 Group:          System/Libraries
 Requires:       libfty_certificate_generator1 = %{version}
+Requires:       libsodium-devel
+Requires:       zeromq-devel
+Requires:       czmq-devel >= 3.0.2
 Requires:       fty-common-logging-devel
 Requires:       cxxtools-devel
 Requires:       fty-common-devel

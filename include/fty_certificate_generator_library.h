@@ -30,6 +30,7 @@
 //  Set up environment for the application
 
 //  External dependencies
+#include <czmq.h>
 #include <fty_log.h>
 #include <cxxtools/allocator.h>
 #include <fty_common.h>
