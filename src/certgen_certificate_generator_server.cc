@@ -31,6 +31,7 @@
 #include <fstream>
 #include <memory>
 #include <netdb.h>
+#include <dirent.h>
 
 // because there is NO std::chrono::days in C++14
 #define HOURS_IN_DAY        24
@@ -49,6 +50,23 @@ namespace certgen
     using namespace fty;
     using namespace std::placeholders;
 
+    static std::string getSystemHostname();
+    static std::list<std::string> getSystemDomainNames();
+    static bool isSystemWithoutDHCP ();
+    static std::list<std::string> getSystemIPs();
+    static fty::CertificateConfig loadConfig (const std::string & configVersion, const certgen::CertificateConfig & conf);
+    static CertificateGeneratorConfig getConfig(const std::string & configPath, const std::string & serviceName);
+    static Keys generateKeys (const KeyConfig & conf);
+    static void storeToSecw (const Keys & keyPair, const CertificateX509 & cert, const StorageConfigSecwParams & params);
+    static void storeToFile (const Keys & keyPair, const CertificateX509 & cert, const StorageConfigFileParams & params);
+    static void store (const Keys & keyPair, const CertificateX509 & cert, const StorageConfig & conf);
+    static std::vector<std::string> getAllServices(const std::string & folderPath, const std::string & serviceFileExtension);
+    static void initCert(const std::string & configFolder);
+    static bool isCertPresentSecw(const StorageConfigSecwParams & conf);
+    static bool isCertPresentFile(const StorageConfigFileParams & conf);
+    static bool isCertPresent(const StorageConfig & conf);
+    static bool needCertGen(const StorageConfig & conf);
+
     CertificateGeneratorServer::CertificateGeneratorServer(const std::string & configPath)
         : m_configPath(configPath)
     {
@@ -58,6 +76,8 @@ namespace certgen
         m_supportedCommands[IMPORT_CERTIFICATE] = std::bind(&CertificateGeneratorServer::handleImportCertificate, this, _1);
         m_supportedCommands[GET_PENDING_CSR] = std::bind(&CertificateGeneratorServer::handleGetPendingCSR, this, _1);
         m_supportedCommands[REMOVE_PENDING_CSR] = std::bind(&CertificateGeneratorServer::handleRemovePendingCSR, this, _1);
+
+        initCert(m_configPath);
     }
 
     Payload CertificateGeneratorServer::handleRequest(const Sender & /*sender*/, const Payload & payload)
@@ -299,16 +319,17 @@ namespace certgen
     static void storeToSecw (const Keys & keyPair, const CertificateX509 & cert, const StorageConfigSecwParams & params)
     {
         // TODO setup socket sync client
+        bool certPresent = isCertPresentSecw(params);
+
         fty::SocketSyncClient client("secw-test.socket");
 
         secw::ProducerAccessor secwAccessor(client);
-      
 
         const std::string & portfolio = params.portfolio();
         const std::string & documentName = params.documentName();
 
         // check if the document already exists
-        try
+        if(certPresent)
         {   // if already exists, update
             secw::DocumentPtr docPtr = secwAccessor.getDocumentWithoutPrivateDataByName(portfolio, documentName);
 
@@ -321,9 +342,8 @@ namespace certgen
 
             // do not update usages
             secwAccessor.updateDocument(portfolio, std::dynamic_pointer_cast<secw::Document>(internalCertDoc));
-
         }
-        catch(const secw::SecwNameDoesNotExistException &) // document does not exist
+        else
         {   // if not, create new document
             secw::InternalCertificatePtr certDoc = std::make_shared<secw::InternalCertificate>(documentName, cert.getPem(), keyPair.getPem());
 
@@ -346,6 +366,11 @@ namespace certgen
 
         certFile.open(certFilePath);
         keyFile.open(keyFilePath);
+
+        if(!certFile.good() || !keyFile.good())
+        {
+            throw std::runtime_error("Invalid certificate file path");
+        }
 
         if(params.fileCertificateFormat() == "PEM")
         {
@@ -387,6 +412,120 @@ namespace certgen
         }
     }
 
+    static void initCert(const std::string & configPath)
+    {   // get all files in config folder
+        // TODO put config extension in common header??
+        std::vector<std::string> serviceList = getAllServices(configPath, "cfg");
+
+        // get services config
+        for(std::string service : serviceList)
+        {
+            CertificateGeneratorConfig certgenConfig = getConfig(configPath, service);
+            fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
+
+            if(needCertGen(certgenConfig.storageConf()))
+            {
+                // if no certificate available, generate new self signed certificate
+                fty::Keys keyPair = generateKeys(certgenConfig.keyConf());
+                store(keyPair, CertificateX509::selfSignSha256(keyPair, config), certgenConfig.storageConf());
+            }
+        }
+    }
+
+    static std::vector<std::string> getAllServices(const std::string & folderPath, const std::string & serviceFileExtension)
+    {
+        std::vector<std::string> serviceList;
+
+        DIR *dir;
+        struct dirent *ent;
+        if((dir = opendir(folderPath.c_str())) != NULL)
+        {
+            while ((ent = readdir(dir)) != NULL)
+            {
+                std::string filePath(ent->d_name);
+                std::string fileName = filePath.substr(filePath.find_last_of("/") + 1);
+
+                if((fileName.substr(fileName.find_last_of(".") + 1)) == serviceFileExtension)
+                {
+                    std::string serviceName = fileName.substr(0, fileName.find_last_of("."));
+                    serviceList.push_back(serviceName);
+                }
+            }
+            closedir (dir);
+        }
+        else
+        {
+            throw std::runtime_error("Invalid configuration folder");
+        }
+
+        return serviceList;
+    }
+
+    static bool isCertPresentSecw(const StorageConfigSecwParams & params)
+    {
+        fty::SocketSyncClient client("secw-test.socket");
+
+        secw::ProducerAccessor secwAccessor(client);
+    
+        const std::string & portfolio = params.portfolio();
+        const std::string & documentName = params.documentName();
+
+        // check if the document already exists
+        try
+        {   // if already exists, return false
+            secw::DocumentPtr docPtr = secwAccessor.getDocumentWithoutPrivateDataByName(portfolio, documentName);
+
+            return true;
+        }
+        catch(const secw::SecwNameDoesNotExistException &) // document does not exist
+        {   // if does not exist, create new document only if permanent storage is required
+            return false;
+        }
+    }
+
+    static bool isCertPresentFile(const StorageConfigFileParams & params)
+    {
+        const std::string & certFilePath = params.fileCertificatePath();
+        const std::string & keyFilePath  = params.fileKeyPath();
+
+        std::ifstream certFile(certFilePath);
+        std::ifstream keyFile(keyFilePath);
+
+        bool certExists = certFile.good() && keyFile.good();
+
+        certFile.close();
+        keyFile.close();
+
+        return certExists;
+    }
+
+    // if true, a new certificate for the service must be generated
+    static bool isCertPresent(const StorageConfig & conf)
+    {
+        bool retValue = false;
+
+        if(conf.storageType() == "secw")
+        {
+            const StorageConfigSecwParams *secwParams = dynamic_cast<StorageConfigSecwParams*>(conf.params().get());
+            retValue = isCertPresentSecw(*secwParams); 
+        }
+        else if(conf.storageType() == "file")
+        {
+            const StorageConfigFileParams *fileParams = dynamic_cast<StorageConfigFileParams*>(conf.params().get());
+            retValue = isCertPresentFile(*fileParams);
+        }
+        else
+        {
+            throw std::runtime_error ("Invalid storage type");
+        }
+
+        return retValue;
+    }
+
+    static bool needCertGen(const StorageConfig & conf)
+    {
+        return (conf.isPermanent() && ! isCertPresent(conf));
+    }
 
     std::string CertificateGeneratorServer::handleGenerateSelfsignedCertificate(const fty::Payload & params)
     {

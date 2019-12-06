@@ -10,7 +10,7 @@ PartOf=bios.target
 
 [Service]
 Type=simple
-User=bios
+User=certificate-generator-daemon
 EnvironmentFile=-@prefix@/share/bios/etc/default/bios
 EnvironmentFile=-@prefix@/share/bios/etc/default/bios__%n.conf
 EnvironmentFile=-@prefix@/share/fty/etc/default/fty
