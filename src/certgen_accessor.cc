@@ -54,6 +54,14 @@ namespace certgen
         fty::Payload payload = sendCommand(IMPORT_CERTIFICATE, {serviceName, cert});
     }
 
+    
+    fty::CertificateX509 CertGenAccessor::getCertificate(const std::string & serviceName) const
+    {
+        fty::Payload payload = sendCommand(GET_CERTIFICATE, {serviceName});
+
+        return fty::CertificateX509(payload.at(0));
+    }
+
     fty::CsrX509 CertGenAccessor::getPendingCsr(const std::string & serviceName) const
     {
         fty::Payload payload = sendCommand(GET_PENDING_CSR, {serviceName});
@@ -141,9 +149,6 @@ std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClien
             {
                 CertGenAccessor accessor(syncClient);
                 accessor.generateSelfCertificateReq("fail");
-                printf(" *<=  Test #%s > Ok\n", testNumber.c_str());
-                testsResults.emplace_back (" Test #"+testNumber+" "+testName,true);
-
                 throw std::invalid_argument("Found configuration file");
             }
             catch(const std::runtime_error& e)
@@ -350,12 +355,63 @@ std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClien
             }
         }
     } // 3.X
-    
+
     //test 4.X
-    /*
     {
         //test 4.1
         testNumber = "4.1";
+        testName = "getCertificate => success case";
+        printf("\n-----------------------------------------------------------------------\n");
+        {
+            printf(" *=>  Test #%s %s\n", testNumber.c_str(), testName.c_str());
+            try
+            {
+                CertGenAccessor accessor(syncClient);
+                fty::CertificateX509 cert(accessor.getCertificate("service-1"));
+
+                printf(" *<=  Test #%s > Ok\n", testNumber.c_str());
+                testsResults.emplace_back (" Test #"+testNumber+" "+testName,true);
+            }
+            catch(const std::exception& e)
+            {
+                printf (" *<=  Test #%s > Failed\n", testNumber.c_str ());
+                printf ("Error: %s\n", e.what ());
+                testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
+            }
+        } 
+        //test 4.2
+        testNumber = "4.2";
+        testName = "getCertificate => invalid configuration file";
+        printf("\n-----------------------------------------------------------------------\n");
+        {
+            printf(" *=>  Test #%s %s\n", testNumber.c_str(), testName.c_str());
+            try
+            {
+                CertGenAccessor accessor(syncClient);
+                fty::CertificateX509 cert(accessor.getCertificate("fail"));
+
+                throw std::invalid_argument("Found configuration file");
+            }
+            catch(const std::runtime_error& e)
+            {
+                //expected error
+                printf(" *<=  Test #%s > OK\n", testNumber.c_str());
+                testsResults.emplace_back (" Test #"+testNumber+" "+testName,true);
+            }
+            catch(const std::exception& e)
+            {
+                printf (" *<=  Test #%s > Failed\n", testNumber.c_str ());
+                printf ("Error: %s\n", e.what ());
+                testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
+            }
+        } 
+    } // 4.X
+    
+    //test 5.X
+    /*
+    {
+        //test 5.1
+        testNumber = "5.1";
         testName = "importCertificate => valid configuration file";
         printf("\n-----------------------------------------------------------------------\n");
         {
@@ -386,7 +442,7 @@ std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClien
                 testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
             }
         }
-    } // 4.X
+    } // 5.X
     */
   
 

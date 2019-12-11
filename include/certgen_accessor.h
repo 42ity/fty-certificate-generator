@@ -64,6 +64,14 @@ namespace certgen
         );
 
         /**
+         * @brief get certificate PEM
+         * @param serviceName name of the service
+         * 
+         * @return fty::CertificateX509 object
+         */
+        fty::CertificateX509 getCertificate(const std::string & serviceName) const;
+
+        /**
          * @brief get existing certificate signing request (CSR)
          * @param serviceName name of the service
          * 

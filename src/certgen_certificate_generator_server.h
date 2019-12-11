@@ -32,6 +32,8 @@ namespace certgen
 
     using FctCommandHandler = std::function<std::string (const std::vector<std::string> &)>;
 
+    static const std::string SECW_SOCKET_PATH = "/run/fty-security-wallet/secw.socket";
+
     class CertificateGeneratorServer final : public fty::SyncServer
     {
         public:
@@ -49,6 +51,7 @@ namespace certgen
             std::string handleGenerateSelfsignedCertificate(const fty::Payload & params);
             std::string handleGenerateCSR(const fty::Payload & params);
             std::string handleImportCertificate(const fty::Payload & params);
+            std::string handleGetCertificate(const fty::Payload & params);
             std::string handleGetPendingCSR(const fty::Payload & params);
             std::string handleRemovePendingCSR(const fty::Payload & params);
     };
