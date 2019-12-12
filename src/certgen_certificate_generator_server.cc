@@ -29,6 +29,7 @@
 #include "fty_certificate_generator_classes.h"
 #include <chrono>
 #include <fstream>
+#include <streambuf>
 #include <memory>
 #include <netdb.h>
 #include <dirent.h>
@@ -74,6 +75,7 @@ namespace certgen
         m_supportedCommands[GENERATE_SELFSIGNED_CERTIFICATE] = std::bind(&CertificateGeneratorServer::handleGenerateSelfsignedCertificate, this, _1);
         m_supportedCommands[GENERATE_CSR] = std::bind(&CertificateGeneratorServer::handleGenerateCSR, this, _1);
         m_supportedCommands[IMPORT_CERTIFICATE] = std::bind(&CertificateGeneratorServer::handleImportCertificate, this, _1);
+        m_supportedCommands[GET_CERTIFICATE] = std::bind(&CertificateGeneratorServer::handleGetCertificate, this, _1);
         m_supportedCommands[GET_PENDING_CSR] = std::bind(&CertificateGeneratorServer::handleGetPendingCSR, this, _1);
         m_supportedCommands[REMOVE_PENDING_CSR] = std::bind(&CertificateGeneratorServer::handleRemovePendingCSR, this, _1);
 
@@ -321,7 +323,7 @@ namespace certgen
         // TODO setup socket sync client
         bool certPresent = isCertPresentSecw(params);
 
-        fty::SocketSyncClient client("secw-test.socket");
+        fty::SocketSyncClient client(SECW_SOCKET_PATH);
 
         secw::ProducerAccessor secwAccessor(client);
 
@@ -412,6 +414,84 @@ namespace certgen
         }
     }
 
+    static std::string loadFromSecw (const StorageConfigSecwParams & params)
+    {
+        // TODO setup socket sync client
+        bool certPresent = isCertPresentSecw(params);
+
+        // check if the document exists
+        if(!certPresent)
+        {
+            throw std::runtime_error("Unable to find requested document");
+        }
+
+        fty::SocketSyncClient client(SECW_SOCKET_PATH);
+        secw::ProducerAccessor secwAccessor(client);
+
+        const std::string & portfolio = params.portfolio();
+        const std::string & documentName = params.documentName();
+
+        secw::DocumentPtr docPtr = secwAccessor.getDocumentWithoutPrivateDataByName(portfolio, documentName);
+
+        secw::InternalCertificatePtr internalCertDoc = secw::InternalCertificate::tryToCast(docPtr);
+
+        if(internalCertDoc == nullptr)
+        {
+            throw std::runtime_error("Unable to cast the document");
+        }
+
+        std::string certificatePem(internalCertDoc->getPem());
+
+        return certificatePem;
+    }
+
+    static std::string loadFromFile (const StorageConfigFileParams & params)
+    {
+        const std::string & certFilePath = params.fileCertificatePath();
+
+        if(params.fileCertificateFormat() != "PEM")
+        {
+            throw std::runtime_error("Invalid certificate file format");
+        }
+
+        std::ifstream certFile(certFilePath);
+        if(!certFile.good())
+        {
+            throw std::runtime_error("Invalid certificate file path");
+        }
+
+        std::string certPem((std::istreambuf_iterator<char>(certFile)),
+                std::istreambuf_iterator<char>());
+
+        CertificateX509 cert(certPem);
+
+        certFile.close();
+
+        return cert.getPem();
+    }
+
+    std::string load(const StorageConfig & conf)
+    {
+        std::string certificatePem = "";
+
+        if(conf.storageType() == "secw")
+        {
+            const StorageConfigSecwParams *secwParams = dynamic_cast<StorageConfigSecwParams*>(conf.params().get());
+            certificatePem = loadFromSecw(*secwParams);
+        }
+        else if(conf.storageType() == "file")
+        {
+            const StorageConfigFileParams *fileParams = dynamic_cast<StorageConfigFileParams*>(conf.params().get());
+            certificatePem = loadFromFile(*fileParams);
+        }
+        else
+        {
+            throw std::runtime_error ("Invalid storage type");
+        }
+
+        return certificatePem;
+    }
+
     static void initCert(const std::string & configPath)
     {   // get all files in config folder
         // TODO put config extension in common header??
@@ -463,7 +543,7 @@ namespace certgen
 
     static bool isCertPresentSecw(const StorageConfigSecwParams & params)
     {
-        fty::SocketSyncClient client("secw-test.socket");
+        fty::SocketSyncClient client(SECW_SOCKET_PATH);
 
         secw::ProducerAccessor secwAccessor(client);
     
@@ -610,6 +690,21 @@ namespace certgen
         return "OK";
     }
 
+    std::string CertificateGeneratorServer::handleGetCertificate(const fty::Payload & params)
+    {
+        if (params.empty() || params[0].empty ())
+        {
+            throw std::runtime_error ("Missing service name");
+        }
+       
+        std::string serviceName (params[0]);
+        CertificateGeneratorConfig certgenConfig = getConfig(m_configPath, serviceName);
+
+        fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
+
+        return load(certgenConfig.storageConf());
+    }
+    
     std::string CertificateGeneratorServer::handleGetPendingCSR(const fty::Payload & params)
     {
         if (params.empty() || params[0].empty ())
