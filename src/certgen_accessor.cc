@@ -420,6 +420,8 @@ std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClien
                 uint64_t csrTimestamp = accessor.getPendingCsrCreationDate("Service-1");
                 
                 throw std::invalid_argument("Got timestamp for non existing pending CSR");
+
+                std::cout << csrTimestamp << std::endl; // necessary to avoid compilation error (unused variable csrTimestamp)
             }
             catch(const std::runtime_error& e)
             {
