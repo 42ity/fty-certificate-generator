@@ -28,11 +28,13 @@
 // common command list for certgen
 namespace certgen
 {
+    static constexpr const char* GET_SERVICES_LIST = "GET_SERVICES_LIST";
     static constexpr const char* GENERATE_SELFSIGNED_CERTIFICATE = "GENERATE_SELFSIGNED_CERTIFICATE";
     static constexpr const char* GENERATE_CSR = "GENERATE_CSR";
     static constexpr const char* IMPORT_CERTIFICATE = "IMPORT_CERTIFICATE";
     static constexpr const char* GET_CERTIFICATE = "GET_CERTIFICATE";
     static constexpr const char* GET_PENDING_CSR = "GET_PENDING_CSR";
+    static constexpr const char* GET_PENDING_CSR_CREAT_DATE = "GET_PENDING_CSR_CREAT_DATE";
     static constexpr const char* REMOVE_PENDING_CSR = "REMOVE_PENDING_CSR";
 }
 
