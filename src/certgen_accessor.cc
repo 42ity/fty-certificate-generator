@@ -122,6 +122,7 @@ namespace certgen
 //  Test of this class => This is used by certgen_certificate_generator_server_test
 //  --------------------------------------------------------------------------
 #include <time.h>
+#include <set>
 
 std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClient & syncClient)
 {
@@ -379,13 +380,15 @@ std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClien
             try
             {
                 CertGenAccessor accessor(syncClient);
-                
+            
+                time_t beforeTimestamp = time(NULL);
                 fty::CsrX509 csr1 = accessor.generateCsr("service-1");
-                time_t currentTimestamp = time(NULL);
+                time_t afterTimestamp = time(NULL);
 
                 uint64_t csrTimestamp = accessor.getPendingCsrCreationDate("service-1");
 
-                if(static_cast<uint64_t>(currentTimestamp) != csrTimestamp)
+                // CSR generation should take less than one second, but it is safer to check against a timestamp range
+                if(static_cast<uint64_t>(beforeTimestamp) > csrTimestamp || static_cast<uint64_t>(afterTimestamp) < csrTimestamp)
                 {
                     printf (" *<=  Test #%s > Failed\n", testNumber.c_str ());
                     printf ("Error: %s\n", "CSR timestamp does not match creation date");
@@ -502,13 +505,19 @@ std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClien
                 CertGenAccessor accessor(syncClient);
                 std::vector<std::string> retList = accessor.getAllServices();
 
-                std::vector<std::string> serviceList;
-                serviceList.push_back(std::string("service-1"));
-                serviceList.push_back(std::string("service-2"));
+                std::set<std::string> serviceSet;
+                serviceSet.insert(std::string("service-2"));
+                serviceSet.insert(std::string("service-1"));
 
-                if(!(std::equal(retList.begin(), retList.end(), serviceList.begin())))
+                std::set<std::string> retSet;
+                for(const std::string & service : retList)
                 {
-                    throw std::invalid_argument("Wrong service list");
+                    retSet.insert(service);
+                }
+
+                if(retSet != serviceSet)
+                {
+                    throw std::invalid_argument("Expected and received service lists do not match");
                 }
 
                 printf(" *<=  Test #%s > Ok\n", testNumber.c_str());

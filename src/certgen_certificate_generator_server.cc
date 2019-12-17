@@ -510,7 +510,7 @@ namespace certgen
         std::vector<std::string> serviceList = getAllServices(configPath, configFileExt);
 
         // get services config
-        for(std::string service : serviceList)
+        for(const std::string & service : serviceList)
         {
             CertificateGeneratorConfig certgenConfig = getConfig(configPath, service);
             fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
