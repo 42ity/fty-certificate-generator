@@ -31,6 +31,7 @@
 #include <fstream>
 #include <streambuf>
 #include <memory>
+#include <stdio.h>
 #include <netdb.h>
 #include <dirent.h>
 
@@ -44,6 +45,11 @@
 #define COUNTRY             "FR"
 #define EMAIL               "noemail"
 
+// position of fields in pending CSR tuple
+#define CSR_KEY_POS 0
+#define CSR_CSR_POS 1
+#define CSR_TS_POS  2
+
 //  Structure of our class
 
 namespace certgen
@@ -51,6 +57,10 @@ namespace certgen
     using namespace fty;
     using namespace std::placeholders;
 
+    // config file extention
+    static constexpr char configFileExt[] = "cfg";
+
+    // static helpers
     static std::string getSystemHostname();
     static std::list<std::string> getSystemDomainNames();
     static bool isSystemWithoutDHCP ();
@@ -72,12 +82,14 @@ namespace certgen
         : m_configPath(configPath)
     {
         //initiate the commands handlers
+        m_supportedCommands[GET_SERVICES_LIST] = std::bind(&CertificateGeneratorServer::handleGetAllServices, this, _1);
         m_supportedCommands[GENERATE_SELFSIGNED_CERTIFICATE] = std::bind(&CertificateGeneratorServer::handleGenerateSelfsignedCertificate, this, _1);
         m_supportedCommands[GENERATE_CSR] = std::bind(&CertificateGeneratorServer::handleGenerateCSR, this, _1);
         m_supportedCommands[IMPORT_CERTIFICATE] = std::bind(&CertificateGeneratorServer::handleImportCertificate, this, _1);
         m_supportedCommands[GET_CERTIFICATE] = std::bind(&CertificateGeneratorServer::handleGetCertificate, this, _1);
-        m_supportedCommands[GET_PENDING_CSR] = std::bind(&CertificateGeneratorServer::handleGetPendingCSR, this, _1);
-        m_supportedCommands[REMOVE_PENDING_CSR] = std::bind(&CertificateGeneratorServer::handleRemovePendingCSR, this, _1);
+        m_supportedCommands[GET_PENDING_CSR] = std::bind(&CertificateGeneratorServer::handleGetPendingCsr, this, _1);
+        m_supportedCommands[GET_PENDING_CSR_CREAT_DATE] = std::bind(&CertificateGeneratorServer::handleGetPendingCsrCreationDate, this, _1);
+        m_supportedCommands[REMOVE_PENDING_CSR] = std::bind(&CertificateGeneratorServer::handleRemovePendingCsr, this, _1);
 
         initCert(m_configPath);
     }
@@ -108,8 +120,8 @@ namespace certgen
             //create copy of the payload
             std::vector<std::string> params(payload.begin() + 1, payload.end());
 
-            std::string result = cmdHandler(params);
-            return {result};
+            std::vector<std::string> result = cmdHandler(params);
+            return result;
         }
         catch (std::exception &e)
         {
@@ -495,10 +507,10 @@ namespace certgen
     static void initCert(const std::string & configPath)
     {   // get all files in config folder
         // TODO put config extension in common header??
-        std::vector<std::string> serviceList = getAllServices(configPath, "cfg");
+        std::vector<std::string> serviceList = getAllServices(configPath, configFileExt);
 
         // get services config
-        for(std::string service : serviceList)
+        for(const std::string & service : serviceList)
         {
             CertificateGeneratorConfig certgenConfig = getConfig(configPath, service);
             fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
@@ -607,7 +619,12 @@ namespace certgen
         return (conf.isPermanent() && ! isCertPresent(conf));
     }
 
-    std::string CertificateGeneratorServer::handleGenerateSelfsignedCertificate(const fty::Payload & params)
+    std::vector<std::string> CertificateGeneratorServer::handleGetAllServices(const fty::Payload & params)
+    {
+        return getAllServices(m_configPath, configFileExt);
+    }
+
+    std::vector<std::string> CertificateGeneratorServer::handleGenerateSelfsignedCertificate(const fty::Payload & params)
     {
         if (params.empty() || params[0].empty ())
         {
@@ -622,10 +639,10 @@ namespace certgen
         fty::Keys keyPair = generateKeys(certgenConfig.keyConf());
 
         store (keyPair, CertificateX509::selfSignSha256(keyPair, config), certgenConfig.storageConf());
-        return "OK";
+        return {"OK"};
     }
 
-    std::string CertificateGeneratorServer::handleGenerateCSR(const fty::Payload & params)
+    std::vector<std::string> CertificateGeneratorServer::handleGenerateCSR(const fty::Payload & params)
     {
         if (params.empty() || params[0].empty ())
         {
@@ -641,14 +658,17 @@ namespace certgen
 
         fty::CsrX509 csr = CsrX509::generateCsr(keyPair, config);
 
+        const auto timePointNow = std::chrono::system_clock::now();
+        std::time_t currentTimestamp = std::chrono::system_clock::to_time_t(timePointNow);
+
         // replace existing csr for a given service, if any
         m_csrPending.erase(serviceName);    // delete old request
-        m_csrPending.insert({serviceName, std::make_pair(keyPair, csr)});
+        m_csrPending.insert({serviceName, std::make_tuple(keyPair, csr, static_cast<uint64_t>(currentTimestamp))});
 
-        return csr.getPem();
+        return {csr.getPem()};
     }
 
-    std::string CertificateGeneratorServer::handleImportCertificate(const fty::Payload & params)
+    std::vector<std::string> CertificateGeneratorServer::handleImportCertificate(const fty::Payload & params)
     {
         if (params.size() != 2)
         {
@@ -679,18 +699,19 @@ namespace certgen
 
         fty::CertificateX509 importedCert(certPem);
 
-        if (importedCert.getPublicKey() != searchPendingCsr->second.second.getPublicKey())
+        // verify that public key of imported certificate and of the pending CSR match
+        if (importedCert.getPublicKey() != std::get<CSR_CSR_POS>(searchPendingCsr->second).getPublicKey())
         {
             throw std::runtime_error("Imported key does not match the signature of the pending CRS");
         }
         
         m_csrPending.erase(serviceName);
 
-        store (searchPendingCsr->second.first, importedCert, certgenConfig.storageConf());
-        return "OK";
+        store (std::get<CSR_KEY_POS>(searchPendingCsr->second), importedCert, certgenConfig.storageConf());
+        return {"OK"};
     }
 
-    std::string CertificateGeneratorServer::handleGetCertificate(const fty::Payload & params)
+    std::vector<std::string> CertificateGeneratorServer::handleGetCertificate(const fty::Payload & params)
     {
         if (params.empty() || params[0].empty ())
         {
@@ -702,10 +723,10 @@ namespace certgen
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
-        return load(certgenConfig.storageConf());
+        return {load(certgenConfig.storageConf())};
     }
     
-    std::string CertificateGeneratorServer::handleGetPendingCSR(const fty::Payload & params)
+    std::vector<std::string> CertificateGeneratorServer::handleGetPendingCsr(const fty::Payload & params)
     {
         if (params.empty() || params[0].empty ())
         {
@@ -721,10 +742,29 @@ namespace certgen
             throw std::runtime_error ("No pending CSR request for service " + serviceName);
         }
 
-        return m_csrPending.at(serviceName).second.getPem();
+        return {std::get<CSR_CSR_POS>(searchPendingCsr->second).getPem()};
+    }
+    
+    std::vector<std::string> CertificateGeneratorServer::handleGetPendingCsrCreationDate(const fty::Payload & params)
+    {
+        if (params.empty() || params[0].empty ())
+        {
+            throw std::runtime_error ("Missing service name");
+        }
+       
+        std::string serviceName (params[0]);
+
+        auto searchPendingCsr = m_csrPending.find(serviceName);
+
+        if (searchPendingCsr == m_csrPending.end())
+        {
+            throw std::runtime_error ("No pending CSR request for service " + serviceName);
+        }
+
+        return {std::to_string(std::get<CSR_TS_POS>(searchPendingCsr->second))};
     }
 
-    std::string CertificateGeneratorServer::handleRemovePendingCSR(const fty::Payload & params)
+    std::vector<std::string> CertificateGeneratorServer::handleRemovePendingCsr(const fty::Payload & params)
     {
         if (params.empty() || params[0].empty ())
         {
@@ -735,7 +775,7 @@ namespace certgen
 
         m_csrPending.erase(serviceName);
         
-        return "OK";
+        return {"OK"};
     }
 
 } // namescpace certgen

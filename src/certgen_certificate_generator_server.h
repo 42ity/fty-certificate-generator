@@ -24,13 +24,15 @@
 
 #include <fty_common_sync_server.h>
 #include <functional>
+#include <ctime>
 #include <memory>
+#include <tuple>
 
 namespace certgen
 {
     using Command   = std::string;
 
-    using FctCommandHandler = std::function<std::string (const std::vector<std::string> &)>;
+    using FctCommandHandler = std::function<std::vector<std::string> (const std::vector<std::string> &)>;
 
     static const std::string SECW_SOCKET_PATH = "/run/fty-security-wallet/secw.socket";
 
@@ -45,15 +47,17 @@ namespace certgen
             std::string m_configPath;
             
             std::map<Command, FctCommandHandler> m_supportedCommands;
-            std::map<std::string, std::pair<fty::Keys, fty::CsrX509>> m_csrPending; // needed to import an existing certificate correctly 
+            std::map<std::string, std::tuple<fty::Keys, fty::CsrX509, uint64_t>> m_csrPending; // needed to import an existing certificate correctly 
 
             // Handlers for all supported commands
-            std::string handleGenerateSelfsignedCertificate(const fty::Payload & params);
-            std::string handleGenerateCSR(const fty::Payload & params);
-            std::string handleImportCertificate(const fty::Payload & params);
-            std::string handleGetCertificate(const fty::Payload & params);
-            std::string handleGetPendingCSR(const fty::Payload & params);
-            std::string handleRemovePendingCSR(const fty::Payload & params);
+            std::vector<std::string> handleGetAllServices(const fty::Payload & params);
+            std::vector<std::string> handleGenerateSelfsignedCertificate(const fty::Payload & params);
+            std::vector<std::string> handleGenerateCSR(const fty::Payload & params);
+            std::vector<std::string> handleImportCertificate(const fty::Payload & params);
+            std::vector<std::string> handleGetCertificate(const fty::Payload & params);
+            std::vector<std::string> handleGetPendingCsr(const fty::Payload & params);
+            std::vector<std::string> handleGetPendingCsrCreationDate(const fty::Payload & params);
+            std::vector<std::string> handleRemovePendingCsr(const fty::Payload & params);
     };
 
 } // namescpace certgen

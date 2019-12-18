@@ -23,6 +23,9 @@
 #ifndef CERTGEN_ACCESSOR_H_INCLUDED
 #define CERTGEN_ACCESSOR_H_INCLUDED
 
+#include <vector>
+#include <string>
+
 namespace certgen
 {
     /**
@@ -38,6 +41,13 @@ namespace certgen
         explicit CertGenAccessor(fty::SyncClient & reqClient);
         
         ~CertGenAccessor() = default;
+
+        /**
+         * @brief gets list of all services
+         * 
+         * @return std::vector<std::string>
+         */
+        std::vector<std::string> getAllServices();
 
         /**
          * @brief send request to generate self certificate
@@ -78,6 +88,14 @@ namespace certgen
          * @return fty::CsrX509 object
          */
         fty::CsrX509 getPendingCsr(const std::string & serviceName) const;
+
+        /**
+         * @brief get existing certificate signing request (CSR) creation date
+         * @param serviceName name of the service
+         * 
+         * @return uint64_t UNIX timestamp
+         */
+        uint64_t getPendingCsrCreationDate(const std::string & serviceName) const;
 
         /**
          * @brief remove pending certificate signing request (CSR) for specified service

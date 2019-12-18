@@ -19,11 +19,12 @@
     =========================================================================
 */
 
-#include "fty_certificate_generator_classes.h"
-
-#include "certgen_accessor.h"
+#include <string>
 
 #include <fty_common_mlm.h>
+
+#include "fty_certificate_generator_classes.h"
+#include "certgen_accessor.h"
 
 //  Structure of our class
 namespace certgen
@@ -31,6 +32,13 @@ namespace certgen
     CertGenAccessor::CertGenAccessor(fty::SyncClient & reqClient)
         : m_requestClient (reqClient)
     {}
+
+    std::vector<std::string> CertGenAccessor::getAllServices()
+    {
+        fty::Payload payload = sendCommand(GET_SERVICES_LIST, {});
+
+        return payload;
+    }
 
     void CertGenAccessor::generateSelfCertificateReq(
         const std::string & serviceName
@@ -67,6 +75,13 @@ namespace certgen
         fty::Payload payload = sendCommand(GET_PENDING_CSR, {serviceName});
 
         return fty::CsrX509(payload.at(0));
+    }
+
+    uint64_t CertGenAccessor::getPendingCsrCreationDate(const std::string & serviceName) const
+    {
+        fty::Payload payload = sendCommand(GET_PENDING_CSR_CREAT_DATE, {serviceName});
+
+        return static_cast<uint64_t>(std::stoi(payload.at(0)));
     }
 
     void CertGenAccessor::removePendingCsr(const std::string & serviceName)
@@ -106,7 +121,8 @@ namespace certgen
 //  --------------------------------------------------------------------------
 //  Test of this class => This is used by certgen_certificate_generator_server_test
 //  --------------------------------------------------------------------------
-
+#include <time.h>
+#include <set>
 
 std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClient & syncClient)
 {
@@ -354,6 +370,75 @@ std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClien
                 testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
             }
         }
+
+        //test 3.4
+        testNumber = "3.4";
+        testName = "getPendingCsr => get pending CSR creation date (SUCCESS CASE)";
+        printf("\n-----------------------------------------------------------------------\n");
+        {
+            printf(" *=>  Test #%s %s\n", testNumber.c_str(), testName.c_str());
+            try
+            {
+                CertGenAccessor accessor(syncClient);
+            
+                time_t beforeTimestamp = time(NULL);
+                fty::CsrX509 csr1 = accessor.generateCsr("service-1");
+                time_t afterTimestamp = time(NULL);
+
+                uint64_t csrTimestamp = accessor.getPendingCsrCreationDate("service-1");
+
+                // CSR generation should take less than one second, but it is safer to check against a timestamp range
+                if(static_cast<uint64_t>(beforeTimestamp) > csrTimestamp || static_cast<uint64_t>(afterTimestamp) < csrTimestamp)
+                {
+                    printf (" *<=  Test #%s > Failed\n", testNumber.c_str ());
+                    printf ("Error: %s\n", "CSR timestamp does not match creation date");
+                    testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
+                }
+                else
+                {
+                    printf(" *<=  Test #%s > Ok\n", testNumber.c_str());
+                    testsResults.emplace_back (" Test #"+testNumber+" "+testName,true);
+                }
+            }
+            catch(const std::exception& e)
+            {
+                printf (" *<=  Test #%s > Failed\n", testNumber.c_str ());
+                printf ("Error: %s\n", e.what ());
+                testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
+            }
+        }
+
+        //test 3.5
+        testNumber = "3.5";
+        testName = "getPendingCsr => get pending CSR creation date (ERROR CASE)";
+        printf("\n-----------------------------------------------------------------------\n");
+        {
+            printf(" *=>  Test #%s %s\n", testNumber.c_str(), testName.c_str());
+            try
+            {
+                CertGenAccessor accessor(syncClient);
+                
+                accessor.removePendingCsr("service-1");
+
+                uint64_t csrTimestamp = accessor.getPendingCsrCreationDate("Service-1");
+                
+                throw std::invalid_argument("Got timestamp for non existing pending CSR");
+
+                std::cout << csrTimestamp << std::endl; // necessary to avoid compilation error (unused variable csrTimestamp)
+            }
+            catch(const std::runtime_error& e)
+            {
+                //expected error
+                printf(" *<=  Test #%s > OK\n", testNumber.c_str());
+                testsResults.emplace_back (" Test #"+testNumber+" "+testName,true);
+            }
+            catch(const std::exception& e)
+            {
+                printf (" *<=  Test #%s > Failed\n", testNumber.c_str ());
+                printf ("Error: %s\n", e.what ());
+                testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
+            }
+        }
     } // 3.X
 
     //test 4.X
@@ -408,10 +493,50 @@ std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClien
     } // 4.X
     
     //test 5.X
-    /*
     {
         //test 5.1
         testNumber = "5.1";
+        testName = "getAllServices";
+        printf("\n-----------------------------------------------------------------------\n");
+        {
+            printf(" *=>  Test #%s %s\n", testNumber.c_str(), testName.c_str());
+            try
+            {
+                CertGenAccessor accessor(syncClient);
+                std::vector<std::string> retList = accessor.getAllServices();
+
+                std::set<std::string> serviceSet;
+                serviceSet.insert(std::string("service-2"));
+                serviceSet.insert(std::string("service-1"));
+
+                std::set<std::string> retSet;
+                for(const std::string & service : retList)
+                {
+                    retSet.insert(service);
+                }
+
+                if(retSet != serviceSet)
+                {
+                    throw std::invalid_argument("Expected and received service lists do not match");
+                }
+
+                printf(" *<=  Test #%s > Ok\n", testNumber.c_str());
+                testsResults.emplace_back (" Test #"+testNumber+" "+testName,true);
+            }
+            catch(const std::exception& e)
+            {
+                printf (" *<=  Test #%s > Failed\n", testNumber.c_str ());
+                printf ("Error: %s\n", e.what ());
+                testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
+            }
+        }
+    } // 5.X
+    
+    //test 6.X
+    /*
+    {
+        //test 6.1
+        testNumber = "6.1";
         testName = "importCertificate => valid configuration file";
         printf("\n-----------------------------------------------------------------------\n");
         {
@@ -442,7 +567,7 @@ std::vector<std::pair<std::string,bool>> certgen_accessor_test(mlm::MlmSyncClien
                 testsResults.emplace_back (" Test #" + testNumber + " " + testName, false);
             }
         }
-    } // 5.X
+    } // 6.X
     */
   
 
