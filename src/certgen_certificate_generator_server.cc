@@ -621,7 +621,10 @@ namespace certgen
 
     std::vector<std::string> CertificateGeneratorServer::handleGetAllServices(const fty::Payload & params)
     {
-        return getAllServices(m_configPath, configFileExt);
+        std::vector<std::string> serviceList = getAllServices(m_configPath, configFileExt);
+        // vector must contain at least one element, otherwise the handler will never return
+        serviceList.insert(serviceList.begin(), "OK");
+        return serviceList;
     }
 
     std::vector<std::string> CertificateGeneratorServer::handleGenerateSelfsignedCertificate(const fty::Payload & params)
