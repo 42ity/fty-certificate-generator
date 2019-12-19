@@ -37,7 +37,9 @@ namespace certgen
     {
         fty::Payload payload = sendCommand(GET_SERVICES_LIST, {});
 
-        return payload;
+        std::vector<std::string> serviceList(payload.begin()+1, payload.end());
+
+        return serviceList;
     }
 
     void CertGenAccessor::generateSelfCertificateReq(
