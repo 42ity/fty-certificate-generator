@@ -3,10 +3,11 @@
 
 [Unit]
 Description=fty-certificate-generator service
-After=network.target malamute.service fty-envvars.service
-Requires=network.target malamute.service fty-envvars.service
+After=network.target malamute.service fty-envvars.service fty-security-wallet.service
+Requires=network.target malamute.service fty-envvars.service fty-security-wallet.service
 Conflicts=shutdown.target
 PartOf=bios.target
+ConditionPathExists=/usr/share/fty-certificate-generator/
 
 [Service]
 Type=simple
