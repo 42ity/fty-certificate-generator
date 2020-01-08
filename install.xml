@@ -8,6 +8,5 @@ Installation model
      -->
 
 <install>
-    <item type = "systemd-tmpfiles" />
     <item path = "/usr/share/fty-certificate-generator" name = "../src/config-files/web.cfg" package = "lib"/>
 </install>
