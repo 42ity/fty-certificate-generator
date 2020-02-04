@@ -48,26 +48,6 @@
 #define FTY_CERTIFICATE_GENERATOR_VERSION \
     FTY_CERTIFICATE_GENERATOR_MAKE_VERSION(FTY_CERTIFICATE_GENERATOR_VERSION_MAJOR, FTY_CERTIFICATE_GENERATOR_VERSION_MINOR, FTY_CERTIFICATE_GENERATOR_VERSION_PATCH)
 
-// czmq_prelude.h bits
-#if !defined (__WINDOWS__)
-#   if (defined WIN32 || defined _WIN32 || defined WINDOWS || defined _WINDOWS)
-#       undef __WINDOWS__
-#       define __WINDOWS__
-#   endif
-#endif
-
-// Windows MSVS doesn't have stdbool
-#if (defined (_MSC_VER) && !defined (true))
-#   if (!defined (__cplusplus) && (!defined (true)))
-#       define true 1
-#       define false 0
-        typedef char bool;
-#   endif
-#else
-#   include <stdbool.h>
-#endif
-// czmq_prelude.h bits
-
 #if defined (__WINDOWS__)
 #   if defined FTY_CERTIFICATE_GENERATOR_STATIC
 #       define FTY_CERTIFICATE_GENERATOR_EXPORT

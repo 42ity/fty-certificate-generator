@@ -36,11 +36,6 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
         rm -rf ./tmp
     fi
     mkdir -p tmp
-    if [ -d "./tmp-deps" ]; then
-        # Checkout/unpack and build area for dependencies
-        rm -rf ./tmp-deps
-    fi
-    mkdir -p tmp-deps
     BUILD_PREFIX=$PWD/tmp
 
     PATH="`echo "$PATH" | sed -e 's,^/usr/lib/ccache/?:,,' -e 's,:/usr/lib/ccache/?:,,' -e 's,:/usr/lib/ccache/?$,,' -e 's,^/usr/lib/ccache/?$,,'`"
