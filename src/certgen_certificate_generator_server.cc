@@ -349,6 +349,8 @@ namespace certgen
 
     static void storeToSecw (const Keys & keyPair, const CertificateX509 & cert, const StorageConfigSecwParams & params)
     {
+        const std::string & SECW_SOCKET_PATH = params.secwSocketPath();
+
         // TODO setup socket sync client
         bool certPresent = isCertPresentSecw(params);
 
@@ -445,6 +447,8 @@ namespace certgen
 
     static std::string loadFromSecw (const StorageConfigSecwParams & params)
     {
+        const std::string & SECW_SOCKET_PATH = params.secwSocketPath();
+
         // TODO setup socket sync client
         bool certPresent = isCertPresentSecw(params);
 
@@ -572,6 +576,8 @@ namespace certgen
 
     static bool isCertPresentSecw(const StorageConfigSecwParams & params)
     {
+        const std::string & SECW_SOCKET_PATH = params.secwSocketPath();
+
         fty::SocketSyncClient client(SECW_SOCKET_PATH);
 
         secw::ProducerAccessor secwAccessor(client);

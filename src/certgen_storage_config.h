@@ -72,6 +72,7 @@ namespace certgen
         std::string m_portfolio;
         std::string m_documentName;
         std::vector<std::string> m_documentUsages;
+        std::string m_secwSocketPath;
     public:
 
         void load(const cxxtools::SerializationInfo& si) override;
@@ -81,6 +82,12 @@ namespace certgen
         const std::string & portfolio() const { return m_portfolio; }
         const std::string & documentName() const { return m_documentName; }
         const std::vector<std::string> & documentUsages() const { return m_documentUsages; }
+
+        // Helper to connect to counter-agent, not part of cert data itself
+        const std::string & secwSocketPath() const {
+            if (m_secwSocketPath.empty()) { return DEFAULT_SECW_SOCKET_PATH; }
+            return m_secwSocketPath;
+        };
     };
 
     class StorageConfigFileParams : public StorageConfigParams

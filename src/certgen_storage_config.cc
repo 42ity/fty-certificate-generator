@@ -83,6 +83,9 @@ namespace certgen
         si.getMember("secw_portfolio") >>= m_portfolio;
         si.getMember("secw_document_name") >>= m_documentName;
         si.getMember("secw_document_usages") >>= m_documentUsages;
+
+        // helper data for counter-agent connection, not part of cert data
+        si.getMember("secw_socket_path") >>= m_secwSocketPath;
     }
 
     std::string StorageConfigSecwParams::toString() const
