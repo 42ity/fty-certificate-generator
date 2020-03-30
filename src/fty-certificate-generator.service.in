@@ -7,7 +7,7 @@ After=network.target malamute.service fty-envvars.service fty-security-wallet.se
 Requires=network.target malamute.service fty-envvars.service fty-security-wallet.service
 Conflicts=shutdown.target
 PartOf=bios.target
-ConditionPathExists=/usr/share/fty-certificate-generator/
+ConditionPathExists=@datadir@/@PACKAGE@/
 
 # We need the actual unix socket available to communicate with secw, not
 # just the daemon running; otherwise currently we do not retry and abort :(
