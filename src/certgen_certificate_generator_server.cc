@@ -325,21 +325,41 @@ namespace certgen
         cxxtools::JsonDeserializer deserializer (configJson);
         deserializer.deserialize (certgenSi);
 
-        std::string si_storage_type;
-        certgenSi.getMember("storage_type") >>= si_storage_type;
-        if (si_storage_type == "secw") {
-            // For secw connections, use server-configured socket path if one
-            // is not by chance defined in the JSON; server constructor (and
-            // config parser in main) are responsible for setting it to a
-            // valid string value.
-            if (!certgenSi.findMember("storage_params")) {
-                throw std::runtime_error ("storage_type/storage_params not found in " + configFilePath);
+// This is a dirtier of two hacks to impose configurable SECW_SOCKET_PATH
+// rootobj / "storage" / "storage_params" / added "secw_socket_path"
+// fix up where "storage/storage_type" == "secw"
+        try {
+            if (!certgenSi.findMember("storage")) {
+                throw std::runtime_error ("storage not found");
             }
-            cxxtools::SerializationInfo certgenSiSP;
-            certgenSi.getMember("storage_params") >>= certgenSiSP;
-            if (!certgenSiSP.findMember("secw_socket_path")) {
-                certgenSiSP.addMember("secw_socket_path") <<= customSecwSocketPath;
+
+            cxxtools::SerializationInfo certgenSiS;
+            certgenSi.getMember("storage") >>= certgenSiS;
+
+            if (!certgenSiS.findMember("storage_type")) {
+                throw std::runtime_error ("storage/storage_type not found");
             }
+
+            std::string si_storage_type;
+            certgenSiS.getMember("storage_type") >>= si_storage_type;
+            if (si_storage_type == "secw") {
+                if (!certgenSiS.findMember("storage_params")) {
+                    throw std::runtime_error ("storage/storage_params not found");
+                }
+
+                cxxtools::SerializationInfo certgenSiSP;
+                certgenSiS.getMember("storage_params") >>= certgenSiSP;
+                if (!certgenSiSP.findMember("secw_socket_path")) {
+                    // For secw connections, use server-configured socket path
+                    // if one is not by chance defined in the JSON; server class
+                    // constructor (and config parser in main) are responsible
+                    // for setting it to a valid string value.
+                    certgenSiSP.addMember("secw_socket_path") <<= customSecwSocketPath;
+                }
+            }
+        } catch (std::exception& e) {
+            log_warning("%s in %s", e.what(), configFilePath.c_str());
+            // Fall through to default handling without overrides beforehand
         }
 
         CertificateGeneratorConfig certgenConfig;
