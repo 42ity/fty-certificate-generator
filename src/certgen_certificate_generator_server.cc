@@ -66,13 +66,16 @@ namespace certgen
     static bool isSystemWithoutDHCP ();
     static std::list<std::string> getSystemIPs();
     static fty::CertificateConfig loadConfig (const std::string & configVersion, const certgen::CertificateConfig & conf);
-    static CertificateGeneratorConfig getConfig(const std::string & configPath, const std::string & serviceName);
+    // Note: unfortunately, the best idea we had so far was to hack into
+    // the otherwise cleanly structured storage-agnostic config reader
+    // to put the configurable secw socket path into it...
+    static CertificateGeneratorConfig getConfig(const std::string & configPath, const std::string & serviceName, const std::string & customSecwSocketPath);
     static Keys generateKeys (const KeyConfig & conf);
     static void storeToSecw (const Keys & keyPair, const CertificateX509 & cert, const StorageConfigSecwParams & params);
     static void storeToFile (const Keys & keyPair, const CertificateX509 & cert, const StorageConfigFileParams & params);
     static void store (const Keys & keyPair, const CertificateX509 & cert, const StorageConfig & conf);
     static std::vector<std::string> getAllServices(const std::string & folderPath, const std::string & serviceFileExtension);
-    static void initCert(const std::string & configFolder);
+    static void initCert(const std::string & configFolder, const std::string & customSecwSocketPath);
     static bool isCertPresentSecw(const StorageConfigSecwParams & conf);
     static bool isCertPresentFile(const StorageConfigFileParams & conf);
     static bool isCertPresent(const StorageConfig & conf);
@@ -93,7 +96,7 @@ namespace certgen
         m_supportedCommands[GET_PENDING_CSR_CREAT_DATE] = std::bind(&CertificateGeneratorServer::handleGetPendingCsrCreationDate, this, _1);
         m_supportedCommands[REMOVE_PENDING_CSR] = std::bind(&CertificateGeneratorServer::handleRemovePendingCsr, this, _1);
 
-        initCert(m_configPath);
+        initCert(m_configPath, SECW_SOCKET_PATH);
     }
 
     void CertificateGeneratorServer::setSecwSocketPath(const std::string & customSecwSocketPath) {
@@ -304,7 +307,7 @@ namespace certgen
     }
 
     // read config helper function
-    static CertificateGeneratorConfig getConfig(const std::string & configPath, const std::string & serviceName)
+    static CertificateGeneratorConfig getConfig(const std::string & configPath, const std::string & serviceName, const std::string & customSecwSocketPath)
     {
         std::string configFilePath(configPath + serviceName + ".cfg");
         std::ifstream configFile (configFilePath);
@@ -321,6 +324,23 @@ namespace certgen
         cxxtools::SerializationInfo certgenSi;
         cxxtools::JsonDeserializer deserializer (configJson);
         deserializer.deserialize (certgenSi);
+
+        std::string si_storage_type;
+        certgenSi.getMember("storage_type") >>= si_storage_type;
+        if (si_storage_type == "secw") {
+            // For secw connections, use server-configured socket path if one
+            // is not by chance defined in the JSON; server constructor (and
+            // config parser in main) are responsible for setting it to a
+            // valid string value.
+            if (!certgenSi.findMember("storage_params")) {
+                throw std::runtime_error ("storage_type/storage_params not found in " + configFilePath);
+            }
+            cxxtools::SerializationInfo certgenSiSP;
+            certgenSi.getMember("storage_params") >>= certgenSiSP;
+            if (!certgenSiSP.findMember("secw_socket_path")) {
+                certgenSiSP.addMember("secw_socket_path") <<= customSecwSocketPath;
+            }
+        }
 
         CertificateGeneratorConfig certgenConfig;
         certgenSi >>= certgenConfig;
@@ -525,7 +545,7 @@ namespace certgen
         return certificatePem;
     }
 
-    static void initCert(const std::string & configPath)
+    static void initCert(const std::string & configPath, const std::string & customSecwSocketPath)
     {   // get all files in config folder
         // TODO put config extension in common header??
         std::vector<std::string> serviceList = getAllServices(configPath, configFileExt);
@@ -533,7 +553,7 @@ namespace certgen
         // get services config
         for(const std::string & service : serviceList)
         {
-            CertificateGeneratorConfig certgenConfig = getConfig(configPath, service);
+            CertificateGeneratorConfig certgenConfig = getConfig(configPath, service, customSecwSocketPath);
             fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
             if(needCertGen(certgenConfig.storageConf()))
@@ -658,7 +678,7 @@ namespace certgen
         }
 
         std::string serviceName (params[0]);
-        CertificateGeneratorConfig certgenConfig = getConfig(m_configPath, serviceName);
+        CertificateGeneratorConfig certgenConfig = getConfig(m_configPath, serviceName, SECW_SOCKET_PATH);
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
@@ -676,7 +696,7 @@ namespace certgen
         }
 
         std::string serviceName (params[0]);
-        CertificateGeneratorConfig certgenConfig = getConfig(m_configPath, serviceName);
+        CertificateGeneratorConfig certgenConfig = getConfig(m_configPath, serviceName, SECW_SOCKET_PATH);
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
@@ -719,7 +739,7 @@ namespace certgen
             throw std::runtime_error ("No pending CSR request for service " + serviceName);
         }
 
-        CertificateGeneratorConfig certgenConfig = getConfig(m_configPath, serviceName);
+        CertificateGeneratorConfig certgenConfig = getConfig(m_configPath, serviceName, SECW_SOCKET_PATH);
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
@@ -745,7 +765,7 @@ namespace certgen
         }
        
         std::string serviceName (params[0]);
-        CertificateGeneratorConfig certgenConfig = getConfig(m_configPath, serviceName);
+        CertificateGeneratorConfig certgenConfig = getConfig(m_configPath, serviceName, SECW_SOCKET_PATH);
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
