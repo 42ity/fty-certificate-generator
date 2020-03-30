@@ -345,6 +345,11 @@ namespace certgen
         CertificateGeneratorConfig certgenConfig;
         certgenSi >>= certgenConfig;
 
+        log_debug("certgenConfig storage config params applied for %s: %s",
+            configFilePath.c_str(),
+            certgenConfig.storageConf().params()->toString().c_str()
+        );
+
         return certgenConfig;
     }
 
