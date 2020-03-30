@@ -84,10 +84,9 @@ namespace certgen
         const std::vector<std::string> & documentUsages() const { return m_documentUsages; }
 
         // Helper to connect to counter-agent, not part of cert data itself
-        const std::string & secwSocketPath() const {
-            if (m_secwSocketPath.empty()) { return DEFAULT_SECW_SOCKET_PATH; }
-            return m_secwSocketPath;
-        };
+        const std::string & secwSocketPath() const { return m_secwSocketPath; };
+        // Validity is up to caller, here we only store strings
+        void setSecwSocketPath(const std::string & customSecwSocketPath) { m_secwSocketPath = customSecwSocketPath; }
     };
 
     class StorageConfigFileParams : public StorageConfigParams
