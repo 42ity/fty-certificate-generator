@@ -325,6 +325,12 @@ namespace certgen
         cxxtools::JsonDeserializer deserializer (configJson);
         deserializer.deserialize (certgenSi);
 
+// Uncomment one or both of these to get the feature
+// of setting a configurable secw socket path string
+#define IMPOSE_SECW_SOCKET_PATH_VIRTUAL_JSON
+#define IMPOSE_SECW_SOCKET_PATH_NONCONST_SETTER
+
+#ifdef IMPOSE_SECW_SOCKET_PATH_VIRTUAL_JSON
 // This is a dirtier of two hacks to impose configurable SECW_SOCKET_PATH
 // rootobj / "storage" / "storage_params" / added "secw_socket_path"
 // fix up where "storage/storage_type" == "secw"
@@ -361,10 +367,13 @@ namespace certgen
             log_warning("%s in %s", e.what(), configFilePath.c_str());
             // Fall through to default handling without overrides beforehand
         }
+#endif // IMPOSE_SECW_SOCKET_PATH_VIRTUAL_JSON
 
         CertificateGeneratorConfig certgenConfig;
         certgenSi >>= certgenConfig;
 
+#ifdef IMPOSE_SECW_SOCKET_PATH_NONCONST_SETTER
+// This is a cleaner-looking of two hacks to impose configurable SECW_SOCKET_PATH
         const StorageConfig &conf = certgenConfig.storageConf();
         if(conf.storageType() == "secw")
         {
@@ -375,6 +384,7 @@ namespace certgen
             // are responsible for setting it to a valid string value.
             secwParams->setSecwSocketPath(customSecwSocketPath);
         }
+#endif // IMPOSE_SECW_SOCKET_PATH_NONCONST_SETTER
 
         log_debug("certgenConfig storage config params applied for %s: %s",
             configFilePath.c_str(),
