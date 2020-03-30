@@ -27,8 +27,8 @@
 #include <memory>
 #include <ostream>
 
-#include "cxxtools/serializationinfo.h"
-#include "cxxtools/jsondeserializer.h"
+#include <cxxtools/serializationinfo.h>
+#include <cxxtools/jsondeserializer.h>
 
 namespace certgen
 {
