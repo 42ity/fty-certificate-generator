@@ -78,9 +78,11 @@ namespace certgen
     static bool isCertPresent(const StorageConfig & conf);
     static bool needCertGen(const StorageConfig & conf);
 
-    CertificateGeneratorServer::CertificateGeneratorServer(const std::string & configPath)
+    CertificateGeneratorServer::CertificateGeneratorServer(const std::string & configPath, const std::string & customSecwSocketPath)
         : m_configPath(configPath)
     {
+        setSecwSocketPath(customSecwSocketPath);
+
         //initiate the commands handlers
         m_supportedCommands[GET_SERVICES_LIST] = std::bind(&CertificateGeneratorServer::handleGetAllServices, this, _1);
         m_supportedCommands[GENERATE_SELFSIGNED_CERTIFICATE] = std::bind(&CertificateGeneratorServer::handleGenerateSelfsignedCertificate, this, _1);
@@ -92,6 +94,21 @@ namespace certgen
         m_supportedCommands[REMOVE_PENDING_CSR] = std::bind(&CertificateGeneratorServer::handleRemovePendingCsr, this, _1);
 
         initCert(m_configPath);
+    }
+
+    void CertificateGeneratorServer::setSecwSocketPath(const std::string & customSecwSocketPath) {
+        if (customSecwSocketPath.empty()) {
+            log_debug("Using DEFAULT_SECW_SOCKET_PATH");
+            SECW_SOCKET_PATH = DEFAULT_SECW_SOCKET_PATH;
+            return;
+        }
+
+        if (customSecwSocketPath.find("/") == 0) {
+            log_debug("Changing SECW_SOCKET_PATH to '%s'", customSecwSocketPath.c_str());
+            SECW_SOCKET_PATH = customSecwSocketPath;
+        } else {
+            throw std::runtime_error ("Error while setting socket path: value '" + customSecwSocketPath + "' is invalid");
+        }
     }
 
     Payload CertificateGeneratorServer::handleRequest(const Sender & /*sender*/, const Payload & payload)
@@ -828,6 +845,7 @@ certgen_certificate_generator_server_test (bool verbose)
     agentParams["AGENT_NAME"] = "certgen-test-agent";
     agentParams["CONFIG_PATH"] = SELFTEST_DIR_RO"/cfg/";
     agentParams["ENDPOINT"] = endpoint;
+    agentParams["SECW_SOCKET"] = ""; // refer to default
 
     //start broker agent
     zactor_t *server = zactor_new (fty_certificate_generator_agent, static_cast<void*>(&agentParams));

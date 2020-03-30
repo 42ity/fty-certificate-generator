@@ -35,7 +35,10 @@ void fty_certificate_generator_agent(zsock_t *pipe, void *args)
     const Arguments & arguments = *static_cast<Arguments*>(args);
 
     //create the server
-    certgen::CertificateGeneratorServer server(arguments.at("CONFIG_PATH"));
+    certgen::CertificateGeneratorServer server(
+                                       arguments.at("CONFIG_PATH"),
+                                       arguments.at("SECW_SOCKET")
+                                    );
 
     //launch the agent
     mlm::MlmBasicMailboxServer agent(  pipe,

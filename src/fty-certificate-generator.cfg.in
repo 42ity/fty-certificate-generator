@@ -7,3 +7,16 @@ server
     background = 0      #   Run as background process
     workdir = .         #   Working directory for daemon
     verbose = 0         #   Do verbose logging of activity?
+
+secw-malamute
+    endpoint = ipc://@/malamute #   Malamute endpoint
+    address = security-wallet     #   Agent address
+
+secw-socket
+    socket = @socketSecurityWallet@ #   Direct socket endpoint
+
+certgen-storage
+    config-path = @datadir@/@PACKAGE@
+
+log
+    config = /etc/fty/ftylog.cfg                    # configuration file for fty-common-logging
