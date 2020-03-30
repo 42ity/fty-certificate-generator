@@ -39,7 +39,7 @@ int main (int argc, char *argv [])
 
     // Initialize logging, to console first
     const char *logConfigFile = "";
-    ftylog_setInstance(FTY_CERTGEN_AGENT);
+    ftylog_setInstance(FTY_CERTGEN_AGENT, "");
 
     bool verbose = false;
     int argn;
@@ -98,7 +98,7 @@ int main (int argc, char *argv [])
         paramsCertgen["ENDPOINT"] = config.getEntry("secw-malamute/endpoint", DEFAULT_ENDPOINT);
         paramsCertgen["SECW_SOCKET"] = config.getEntry("secw-socket/socket", "");
 
-        logConfigFile = zconfig_get(cfg, "log/config", "");
+        logConfigFile = config.getEntry("log/config", "").c_str();
     }
 
     //If a log config file is configured, try to load it
