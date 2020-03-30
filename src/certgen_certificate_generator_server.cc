@@ -345,6 +345,17 @@ namespace certgen
         CertificateGeneratorConfig certgenConfig;
         certgenSi >>= certgenConfig;
 
+        const StorageConfig &conf = certgenConfig.storageConf();
+        if(conf.storageType() == "secw")
+        {
+            // Note: this is deliberately non-const, so we can setSecwSocketPath()
+            StorageConfigSecwParams *secwParams = dynamic_cast<StorageConfigSecwParams*>(conf.params().get());
+            // For secw connections, use server-configured socket path;
+            // server constructor (and config parser in main() routine)
+            // are responsible for setting it to a valid string value.
+            secwParams->setSecwSocketPath(customSecwSocketPath);
+        }
+
         log_debug("certgenConfig storage config params applied for %s: %s",
             configFilePath.c_str(),
             certgenConfig.storageConf().params()->toString().c_str()
