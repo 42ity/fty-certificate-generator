@@ -9,7 +9,7 @@ Conflicts=shutdown.target
 PartOf=bios.target
 
 # config-path for certgen
-ConditionPathExists=@datadir@/@PACKAGE@/
+ConditionPathExists=@DATADIR@/@PACKAGE@/
 
 # We need the actual unix socket available to communicate with secw, not
 # just the daemon running; otherwise currently we do not retry and abort :(
