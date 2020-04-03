@@ -3,6 +3,8 @@
 AC_DEFUN([AX_PROJECT_LOCAL_HOOK], [
     AC_MSG_WARN([Running the PROJECT_LOCAL_HOOK])
 
+    dnl # These paths are in sync with definition in fty-security-wallet acinclude.m4
+    dnl # TODO: Default to rooting at "runstatedir" and default that to "/run" in packaging
     AC_ARG_WITH([socketSecurityWallet],
         [AS_HELP_STRING([--with-socketSecurityWallet=PATH], [Filename of fty-security-wallet service Unix socket])],,
         [with_socketSecurityWallet=/run/fty-security-wallet/secw.socket])
