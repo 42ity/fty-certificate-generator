@@ -20,3 +20,4 @@ certgen-storage
 
 log
     config = /etc/fty/ftylog.cfg                    # configuration file for fty-common-logging
+
