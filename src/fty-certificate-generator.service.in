@@ -30,7 +30,7 @@ EnvironmentFile=-@sysconfdir@/default/fty__%n.conf
 Environment="prefix=@prefix@"
 Environment='SYSTEMD_UNIT_FULLNAME=%n'
 EnvironmentFile=-/run/fty-envvars.env
-ExecStart=@prefix@/bin/fty-certificate-generator
+ExecStart=@prefix@/bin/fty-certificate-generator -c @sysconfdir@/@PACKAGE@/fty-certificate-generator.cfg
 Restart=always
 
 [Install]
