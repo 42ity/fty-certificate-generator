@@ -16,7 +16,7 @@ secw-socket
     socket = @socketSecurityWallet@ #   Direct socket endpoint
 
 certgen-storage
-    config-path = @datadir@/@PACKAGE@
+    config-path = @DATADIR@/@PACKAGE@
 
 log
     config = /etc/fty/ftylog.cfg                    # configuration file for fty-common-logging
