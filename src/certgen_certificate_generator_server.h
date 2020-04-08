@@ -34,18 +34,22 @@ namespace certgen
 
     using FctCommandHandler = std::function<std::vector<std::string> (const std::vector<std::string> &)>;
 
-    static const std::string SECW_SOCKET_PATH = "/run/fty-security-wallet/secw.socket";
+    // hard-coded default, if configs do not specify any other path
+    static const std::string DEFAULT_SECW_SOCKET_PATH = "/run/fty-security-wallet/secw.socket";
 
     class CertificateGeneratorServer final : public fty::SyncServer
     {
         public:
-            explicit CertificateGeneratorServer(const std::string & configPath);
+            explicit CertificateGeneratorServer(const std::string & configPath, const std::string & customSecwSocketPath = "");
             fty::Payload handleRequest(const fty::Sender & sender, const fty::Payload & payload) override;
 
         private: // methods
             // List of supported commands with a reference to the handler for this command.
             std::string m_configPath;
-            
+
+            std::string SECW_SOCKET_PATH;
+            void setSecwSocketPath(const std::string & customSecwSocketPath);
+
             std::map<Command, FctCommandHandler> m_supportedCommands;
             std::map<std::string, std::tuple<fty::Keys, fty::CsrX509, uint64_t>> m_csrPending; // needed to import an existing certificate correctly 
 

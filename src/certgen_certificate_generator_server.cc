@@ -66,21 +66,26 @@ namespace certgen
     static bool isSystemWithoutDHCP ();
     static std::list<std::string> getSystemIPs();
     static fty::CertificateConfig loadConfig (const std::string & configVersion, const certgen::CertificateConfig & conf);
-    static CertificateGeneratorConfig getConfig(const std::string & configPath, const std::string & serviceName);
+    // Note: unfortunately, the best idea we had so far was to hack into
+    // the otherwise cleanly structured storage-agnostic config reader
+    // to put the configurable secw socket path into it...
+    static CertificateGeneratorConfig getConfig(const std::string & configPath, const std::string & serviceName, const std::string & customSecwSocketPath);
     static Keys generateKeys (const KeyConfig & conf);
     static void storeToSecw (const Keys & keyPair, const CertificateX509 & cert, const StorageConfigSecwParams & params);
     static void storeToFile (const Keys & keyPair, const CertificateX509 & cert, const StorageConfigFileParams & params);
     static void store (const Keys & keyPair, const CertificateX509 & cert, const StorageConfig & conf);
     static std::vector<std::string> getAllServices(const std::string & folderPath, const std::string & serviceFileExtension);
-    static void initCert(const std::string & configFolder);
+    static void initCert(const std::string & configFolder, const std::string & customSecwSocketPath);
     static bool isCertPresentSecw(const StorageConfigSecwParams & conf);
     static bool isCertPresentFile(const StorageConfigFileParams & conf);
     static bool isCertPresent(const StorageConfig & conf);
     static bool needCertGen(const StorageConfig & conf);
 
-    CertificateGeneratorServer::CertificateGeneratorServer(const std::string & configPath)
+    CertificateGeneratorServer::CertificateGeneratorServer(const std::string & configPath, const std::string & customSecwSocketPath)
         : m_configPath(configPath)
     {
+        setSecwSocketPath(customSecwSocketPath);
+
         //initiate the commands handlers
         m_supportedCommands[GET_SERVICES_LIST] = std::bind(&CertificateGeneratorServer::handleGetAllServices, this, _1);
         m_supportedCommands[GENERATE_SELFSIGNED_CERTIFICATE] = std::bind(&CertificateGeneratorServer::handleGenerateSelfsignedCertificate, this, _1);
@@ -91,7 +96,22 @@ namespace certgen
         m_supportedCommands[GET_PENDING_CSR_CREAT_DATE] = std::bind(&CertificateGeneratorServer::handleGetPendingCsrCreationDate, this, _1);
         m_supportedCommands[REMOVE_PENDING_CSR] = std::bind(&CertificateGeneratorServer::handleRemovePendingCsr, this, _1);
 
-        initCert(m_configPath);
+        initCert(m_configPath, SECW_SOCKET_PATH);
+    }
+
+    void CertificateGeneratorServer::setSecwSocketPath(const std::string & customSecwSocketPath) {
+        if (customSecwSocketPath.empty()) {
+            log_debug("Using DEFAULT_SECW_SOCKET_PATH");
+            SECW_SOCKET_PATH = DEFAULT_SECW_SOCKET_PATH;
+            return;
+        }
+
+        if (customSecwSocketPath.find("/") == 0) {
+            log_debug("Changing SECW_SOCKET_PATH to '%s'", customSecwSocketPath.c_str());
+            SECW_SOCKET_PATH = customSecwSocketPath;
+        } else {
+            throw std::runtime_error ("Error while setting socket path: value '" + customSecwSocketPath + "' is invalid");
+        }
     }
 
     Payload CertificateGeneratorServer::handleRequest(const Sender & /*sender*/, const Payload & payload)
@@ -287,7 +307,7 @@ namespace certgen
     }
 
     // read config helper function
-    static CertificateGeneratorConfig getConfig(const std::string & configPath, const std::string & serviceName)
+    static CertificateGeneratorConfig getConfig(const std::string & configPath, const std::string & serviceName, const std::string & customSecwSocketPath)
     {
         std::string configFilePath(configPath + serviceName + ".cfg");
         std::ifstream configFile (configFilePath);
@@ -305,8 +325,71 @@ namespace certgen
         cxxtools::JsonDeserializer deserializer (configJson);
         deserializer.deserialize (certgenSi);
 
+// Uncomment one or both of these to get the feature
+// of setting a configurable secw socket path string
+#define IMPOSE_SECW_SOCKET_PATH_VIRTUAL_JSON
+#define IMPOSE_SECW_SOCKET_PATH_NONCONST_SETTER
+
+#ifdef IMPOSE_SECW_SOCKET_PATH_VIRTUAL_JSON
+// This is a dirtier of two hacks to impose configurable SECW_SOCKET_PATH
+// rootobj / "storage" / "storage_params" / added "secw_socket_path"
+// fix up where "storage/storage_type" == "secw"
+        try {
+            if (!certgenSi.findMember("storage")) {
+                throw std::runtime_error ("storage not found");
+            }
+
+            cxxtools::SerializationInfo certgenSiS;
+            certgenSi.getMember("storage") >>= certgenSiS;
+
+            if (!certgenSiS.findMember("storage_type")) {
+                throw std::runtime_error ("storage/storage_type not found");
+            }
+
+            std::string si_storage_type;
+            certgenSiS.getMember("storage_type") >>= si_storage_type;
+            if (si_storage_type == "secw") {
+                if (!certgenSiS.findMember("storage_params")) {
+                    throw std::runtime_error ("storage/storage_params not found");
+                }
+
+                cxxtools::SerializationInfo certgenSiSP;
+                certgenSiS.getMember("storage_params") >>= certgenSiSP;
+                if (!certgenSiSP.findMember("secw_socket_path")) {
+                    // For secw connections, use server-configured socket path
+                    // if one is not by chance defined in the JSON; server class
+                    // constructor (and config parser in main) are responsible
+                    // for setting it to a valid string value.
+                    certgenSiSP.addMember("secw_socket_path") <<= customSecwSocketPath;
+                }
+            }
+        } catch (std::exception& e) {
+            log_warning("%s in %s", e.what(), configFilePath.c_str());
+            // Fall through to default handling without overrides beforehand
+        }
+#endif // IMPOSE_SECW_SOCKET_PATH_VIRTUAL_JSON
+
         CertificateGeneratorConfig certgenConfig;
         certgenSi >>= certgenConfig;
+
+#ifdef IMPOSE_SECW_SOCKET_PATH_NONCONST_SETTER
+// This is a cleaner-looking of two hacks to impose configurable SECW_SOCKET_PATH
+        const StorageConfig &conf = certgenConfig.storageConf();
+        if(conf.storageType() == "secw")
+        {
+            // Note: this is deliberately non-const, so we can setSecwSocketPath()
+            StorageConfigSecwParams *secwParams = dynamic_cast<StorageConfigSecwParams*>(conf.params().get());
+            // For secw connections, use server-configured socket path;
+            // server constructor (and config parser in main() routine)
+            // are responsible for setting it to a valid string value.
+            secwParams->setSecwSocketPath(customSecwSocketPath);
+        }
+#endif // IMPOSE_SECW_SOCKET_PATH_NONCONST_SETTER
+
+        log_debug("certgenConfig storage config params applied for %s: %s",
+            configFilePath.c_str(),
+            certgenConfig.storageConf().params()->toString().c_str()
+        );
 
         return certgenConfig;
     }
@@ -332,6 +415,8 @@ namespace certgen
 
     static void storeToSecw (const Keys & keyPair, const CertificateX509 & cert, const StorageConfigSecwParams & params)
     {
+        const std::string & SECW_SOCKET_PATH = params.secwSocketPath();
+
         // TODO setup socket sync client
         bool certPresent = isCertPresentSecw(params);
 
@@ -428,6 +513,8 @@ namespace certgen
 
     static std::string loadFromSecw (const StorageConfigSecwParams & params)
     {
+        const std::string & SECW_SOCKET_PATH = params.secwSocketPath();
+
         // TODO setup socket sync client
         bool certPresent = isCertPresentSecw(params);
 
@@ -504,7 +591,7 @@ namespace certgen
         return certificatePem;
     }
 
-    static void initCert(const std::string & configPath)
+    static void initCert(const std::string & configPath, const std::string & customSecwSocketPath)
     {   // get all files in config folder
         // TODO put config extension in common header??
         std::vector<std::string> serviceList = getAllServices(configPath, configFileExt);
@@ -512,7 +599,7 @@ namespace certgen
         // get services config
         for(const std::string & service : serviceList)
         {
-            CertificateGeneratorConfig certgenConfig = getConfig(configPath, service);
+            CertificateGeneratorConfig certgenConfig = getConfig(configPath, service, customSecwSocketPath);
             fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
             if(needCertGen(certgenConfig.storageConf()))
@@ -555,6 +642,8 @@ namespace certgen
 
     static bool isCertPresentSecw(const StorageConfigSecwParams & params)
     {
+        const std::string & SECW_SOCKET_PATH = params.secwSocketPath();
+
         fty::SocketSyncClient client(SECW_SOCKET_PATH);
 
         secw::ProducerAccessor secwAccessor(client);
@@ -635,7 +724,7 @@ namespace certgen
         }
 
         std::string serviceName (params[0]);
-        CertificateGeneratorConfig certgenConfig = getConfig(m_configPath, serviceName);
+        CertificateGeneratorConfig certgenConfig = getConfig(m_configPath, serviceName, SECW_SOCKET_PATH);
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
@@ -653,7 +742,7 @@ namespace certgen
         }
 
         std::string serviceName (params[0]);
-        CertificateGeneratorConfig certgenConfig = getConfig(m_configPath, serviceName);
+        CertificateGeneratorConfig certgenConfig = getConfig(m_configPath, serviceName, SECW_SOCKET_PATH);
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
@@ -696,7 +785,7 @@ namespace certgen
             throw std::runtime_error ("No pending CSR request for service " + serviceName);
         }
 
-        CertificateGeneratorConfig certgenConfig = getConfig(m_configPath, serviceName);
+        CertificateGeneratorConfig certgenConfig = getConfig(m_configPath, serviceName, SECW_SOCKET_PATH);
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
@@ -722,7 +811,7 @@ namespace certgen
         }
        
         std::string serviceName (params[0]);
-        CertificateGeneratorConfig certgenConfig = getConfig(m_configPath, serviceName);
+        CertificateGeneratorConfig certgenConfig = getConfig(m_configPath, serviceName, SECW_SOCKET_PATH);
 
         fty::CertificateConfig config = loadConfig (certgenConfig.version(), certgenConfig.certConf());
 
@@ -828,6 +917,7 @@ certgen_certificate_generator_server_test (bool verbose)
     agentParams["AGENT_NAME"] = "certgen-test-agent";
     agentParams["CONFIG_PATH"] = SELFTEST_DIR_RO"/cfg/";
     agentParams["ENDPOINT"] = endpoint;
+    agentParams["SECW_SOCKET"] = ""; // refer to default
 
     //start broker agent
     zactor_t *server = zactor_new (fty_certificate_generator_agent, static_cast<void*>(&agentParams));

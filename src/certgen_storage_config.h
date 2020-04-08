@@ -27,8 +27,8 @@
 #include <memory>
 #include <ostream>
 
-#include "cxxtools/serializationinfo.h"
-#include "cxxtools/jsondeserializer.h"
+#include <cxxtools/serializationinfo.h>
+#include <cxxtools/jsondeserializer.h>
 
 namespace certgen
 {
@@ -72,6 +72,7 @@ namespace certgen
         std::string m_portfolio;
         std::string m_documentName;
         std::vector<std::string> m_documentUsages;
+        std::string m_secwSocketPath;
     public:
 
         void load(const cxxtools::SerializationInfo& si) override;
@@ -81,6 +82,11 @@ namespace certgen
         const std::string & portfolio() const { return m_portfolio; }
         const std::string & documentName() const { return m_documentName; }
         const std::vector<std::string> & documentUsages() const { return m_documentUsages; }
+
+        // Helper to connect to counter-agent, not part of cert data itself
+        const std::string & secwSocketPath() const { return m_secwSocketPath; };
+        // Validity is up to caller, here we only store strings
+        void setSecwSocketPath(const std::string & customSecwSocketPath) { m_secwSocketPath = customSecwSocketPath; }
     };
 
     class StorageConfigFileParams : public StorageConfigParams

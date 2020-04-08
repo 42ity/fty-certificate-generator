@@ -7,7 +7,14 @@ After=network.target malamute.service fty-envvars.service fty-security-wallet.se
 Requires=network.target malamute.service fty-envvars.service fty-security-wallet.service
 Conflicts=shutdown.target
 PartOf=bios.target
-ConditionPathExists=/usr/share/fty-certificate-generator/
+
+# config-path for certgen
+ConditionPathExists=@DATADIR@/@PACKAGE@/
+
+# We need the actual unix socket available to communicate with secw, not
+# just the daemon running; otherwise currently we do not retry and abort :(
+### src/certgen_certificate_generator_server.h:    static const std::string SECW_SOCKET_PATH = "/run/fty-security-wallet/secw.socket";
+ConditionPathExists=@socketSecurityWallet@
 
 [Service]
 Type=simple
@@ -23,7 +30,7 @@ EnvironmentFile=-@sysconfdir@/default/fty__%n.conf
 Environment="prefix=@prefix@"
 Environment='SYSTEMD_UNIT_FULLNAME=%n'
 EnvironmentFile=-/run/fty-envvars.env
-ExecStart=@prefix@/bin/fty-certificate-generator
+ExecStart=@prefix@/bin/fty-certificate-generator -c @sysconfdir@/@PACKAGE@/fty-certificate-generator.cfg
 Restart=always
 
 [Install]
