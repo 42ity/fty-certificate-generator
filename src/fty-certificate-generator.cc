@@ -38,6 +38,7 @@ int main (int argc, char *argv [])
     char *config_file = NULL;
 
     // Initialize logging, to console first
+    std::string logConfigFileStr();
     const char *logConfigFile = "";
     ftylog_setInstance(FTY_CERTGEN_AGENT, "");
 
@@ -98,7 +99,8 @@ int main (int argc, char *argv [])
         paramsCertgen["ENDPOINT"] = config.getEntry("secw-malamute/endpoint", DEFAULT_ENDPOINT);
         paramsCertgen["SECW_SOCKET"] = config.getEntry("secw-socket/socket", "");
 
-        logConfigFile = config.getEntry("log/config", "").c_str();
+        logConfigFileStr =  config.getEntry("log/config", "");
+        logConfigFile = logConfigFileStr.c_str();
     }
 
     //If a log config file is configured, try to load it
