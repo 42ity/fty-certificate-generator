@@ -38,8 +38,8 @@ int main (int argc, char *argv [])
     char *config_file = NULL;
 
     // Initialize logging, to console first
-    std::string logConfigFileStr();
-    const char *logConfigFile = "";
+    std::string logConfigFileStr;
+    const char *logConfigFile;
     ftylog_setInstance(FTY_CERTGEN_AGENT, "");
 
     bool verbose = false;

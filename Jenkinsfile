@@ -548,12 +548,13 @@ pipeline {
                     branch 'master'
                     branch "release/*"
                     changeRequest()
-                }    
+                }
             }
             stages {
                 stage('Compile') {
                     steps {
                         sh '''
+                            export CCACHE_DISABLE=1
                             ./autogen.sh
                             ./configure
                             make clean
