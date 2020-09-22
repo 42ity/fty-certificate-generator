@@ -1,29 +1,31 @@
-# fty-template
+# fty-certificate-generator
 
-This is just a template for agent repository 
+Agent in charge of creating and managing SSL certificates for IPM2 services.
 
-## How to create your agent
+The agent provides the following operations:
+- generate a self-signed certificate
+- manage a Certificate Signing Request (CSR)
+	- create CSR
+	- import an external certificate signed against a pending CSR
+- export current certificate in PEM format
 
-To reate your agent, you have to specify this template when creating a repo on gitbub.
+## How to build
 
-Then you have to update the project.xml file and run from the local clone of your repo the tools ProjectXML from the repo FTY
+To build `fty-certificate-generator` project run:
 
 ```bash
-../FTY/ProjectXML -A --kill-cmake
+./autogen.sh
+./configure
+make
+make check # to run self-test
 ```
 
-Then you can add all the file needed: Example with generation of the template:
+## How to run
+
+To run `fty-certificate-generator` project:
+
+* from within the source tree, run:
 
 ```bash
-	doc/fty-template.adoc
-	include/fty_template.h
-	include/fty_template_class_example.h
-	include/fty_template_library.h
-	packaging/debian/fty-template.dsc.obs
-	packaging/redhat/fty-template.spec
-	src/fty_template_class_example.cc
-	src/fty_template_classes.h
-	src/fty_template_private_selftest.cc
-	src/fty_template_selftest.cc
-	src/libfty_template.pc.in
+./src/fty-certificate-generator
 ```
